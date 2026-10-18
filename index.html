@@ -291,7 +291,27 @@ function findNuts(nuts,lon,lat,maxKm=0){
 }
 // --- Codes postaux : zéros initiaux perdus par Excel, comparaison
 const CP_LEN={DE:5,FR:5,IT:5,ES:5,FI:5,LT:5,RO:6,NO:4,PL:5};
-const isoOf=p=>{p=String(p||'').trim().toUpperCase();return /^[A-Z]{2}$/.test(p)?(p==='UK'?'GB':p==='EL'?'GR':p):'';};
+const COUNTRY_ALIASES={
+  belgique:'BE',belgie:'BE',belgium:'BE',belgien:'BE',
+  allemagne:'DE',germany:'DE',deutschland:'DE',
+  france:'FR',frankreich:'FR',
+  'pays-bas':'NL',netherlands:'NL',nederland:'NL',
+  luxembourg:'LU',luxemburg:'LU',
+  espagne:'ES',spain:'ES',espana:'ES',
+  italie:'IT',italy:'IT',italia:'IT',
+  suisse:'CH',switzerland:'CH',schweiz:'CH',
+  pologne:'PL',poland:'PL',polska:'PL',
+  roumanie:'RO',romania:'RO',
+  tchequie:'CZ','republique tcheque':'CZ',czechia:'CZ','czech republic':'CZ',
+  danemark:'DK',denmark:'DK',
+  'royaume-uni':'GB','united kingdom':'GB','great britain':'GB','grande-bretagne':'GB',
+  grece:'GR',greece:'GR',portugal:'PT',autriche:'AT',austria:'AT',irlande:'IE',ireland:'IE'
+};
+const isoOf=p=>{
+  p=String(p||'').trim();const u=p.toUpperCase();
+  if(/^[A-Z]{2}$/.test(u))return u==='UK'?'GB':u==='EL'?'GR':u;
+  return COUNTRY_ALIASES[p.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()]||'';
+};
 const nuts0Of=iso=>iso==='GB'?'UK':iso==='GR'?'EL':iso;
 const normCp=s=>String(s||'').toUpperCase().replace(/[\s.\-]/g,'');
 function fixCp(cp,iso){
@@ -304,8 +324,8 @@ function cpMatch(iso,a,b){
   const cut=s=>iso==='GB'&&s.length>=5?s.slice(0,-3):(iso==='NL'||iso==='PT')?s.slice(0,4):s;
   a=cut(a);b=cut(b);
   if(a===b||(b.length>=3&&a.startsWith(b))||(a.length>=3&&b.startsWith(a)))return true;
-  // même longueur, seuls les 2 derniers caractères diffèrent : CP voisin (codes par rue, RO/ES…)
-  if(a.length===b.length&&a.length>=4&&a.slice(0,-2)===b.slice(0,-2))return 'near';
+  // même longueur (≥5), seuls les 2 derniers caractères diffèrent : CP voisin (codes par rue, RO/ES…) ; pas pour les CP à 4 chiffres (BE, CH, DK, AT…)
+  if(a.length===b.length&&a.length>=5&&a.slice(0,-2)===b.slice(0,-2))return 'near';
   return false;
 }
 // niveau réel du résultat Nominatim (place_rank / addresstype), indépendant de la stratégie de requête
@@ -473,7 +493,7 @@ async function nominatim(params,cfg){
   if(cfg.email)u.searchParams.set('email',cfg.email);
   for(let a=0;a<3;a++){
     const w=1100-(Date.now()-S.last);if(w>0)await sleep2(w,cfg.signal);S.last=Date.now();
-    const r=await fetch(u,{signal:cfg.signal});
+    const r=await fetch(u,{signal:AbortSignal.any([cfg.signal,AbortSignal.timeout(20000)])});
     if(r.status===429||r.status>=500){await sleep2(5000*(a+1),cfg.signal);continue;}
     if(!r.ok)throw new Error('Nominatim HTTP '+r.status);
     const j=await r.json();if(!j[0])return null;            // échec : jamais mis en cache
@@ -487,7 +507,7 @@ async function nominatim(params,cfg){
 async function geocodeRow(r,m,cfg){
   const pays=val(r,m.pays)||cfg.defPays,iso=isoOf(pays),fx=fixCp(val(r,m.cp),iso),cp=fx.cp;
   const street=[val(r,m.adr),val(r,m.num)].filter(Boolean).join(' '),city=val(r,m.ville);
-  const c=cc(pays),tries=[],notes=fx.note?[fx.note]:[];
+  const c=iso?{countrycodes:iso.toLowerCase()}:cc(pays),tries=[],notes=fx.note?[fx.note]:[];
   if(street)tries.push(['ADRESSE',{street,postalcode:cp,city,...c}]);
   if(street)tries.push(['ADRESSE_LIBRE',{q:[street,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes}]);
   const s2=street&&stripAbbr(street);
@@ -496,8 +516,16 @@ async function geocodeRow(r,m,cfg){
     tries.push(['ADRESSE_LIBRE',{q:[s2,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes},nt]);}
   if(cp)tries.push(['CODE_POSTAL',{postalcode:cp,...c}]);
   if(city)tries.push(['VILLE',{city,...c}]);
-  for(const [prec,p,nt] of tries){const g=await nominatim(p,cfg);if(g)return {...g,prec,iso,cpIn:cp,notes:nt?notes.concat(nt):notes};}
-  return {fail:true,iso,notes};
+  // on garde le meilleur résultat : une adresse trop vague n'interrompt pas les essais suivants
+  let fallback=null;
+  for(const [prec,p,nt] of tries){
+    const g=await nominatim(p,cfg);if(!g)continue;
+    const res={...g,prec,iso,cpIn:cp,notes:nt?notes.concat(nt):notes};
+    if(prec!=='ADRESSE'&&prec!=='ADRESSE_LIBRE')return fallback||res;   // repli CP/ville : seulement si aucune adresse
+    if(g.rank===0||g.rank>=26)return res;                               // rue ou bâtiment
+    fallback??=res;
+  }
+  return fallback||{fail:true,iso,notes};
 }
 const NIV_TXT={RUE:'rue trouvée, pas le numéro',LOCALITE:'résultat au niveau quartier/localité',VILLE_OU_PLUS:'résultat au niveau ville ou plus large',CODE_POSTAL:'résultat au niveau code postal',INCONNU:'niveau du résultat non communiqué'};
 function apply(r,g,cfg){
@@ -533,6 +561,8 @@ function summary(){
   const fmt=o=>Object.entries(o).map(([k,n])=>`${k}: ${n}`).join(' · ');
   return fmt(c)+(Object.keys(f).length?`\nConfiance — ${fmt(f)}`:'')+(v.size>1?`\n⚠ Millésimes NUTS mixtes (${[...v].sort().join(' + ')}) : à signaler pour toute agrégation multi-pays.`:'');
 }
+let renderTimer=0;
+const renderSoon=()=>{if(renderTimer)return;renderTimer=setTimeout(()=>{renderTimer=0;render();},300);};
 async function run(){
   const m=getMap();if(!m.adr&&!m.cp&&!m.ville){setStatus('Indiquez au moins la colonne Adresse, Code postal ou Ville.',true);return;}
   const cfg={nomUrl:$('#nomUrl').value,email:$('#email').value.trim(),defPays:$('#defPays').value,maxKm:Math.max(0,+$('#maxKm').value||0),uk:ukOn()};
@@ -540,17 +570,18 @@ async function run(){
   S.running=true;btns();
   try{await loadNuts($('#res').value);S.nuts=S.levels[lkey(3,$('#res').value)];}catch(e){setStatus('Impossible de charger les contours NUTS : '+e.message,true);S.running=false;btns();return;}
   const todo=S.rows.filter(r=>!$('#onlyMissing').checked||r.statut!=='OK'),rowsRef=S.rows;
-  let i=0;const t0=Date.now();
+  let i=0,bad=0,halt=false;const t0=Date.now();
   for(const r of todo){
     if(!S.running||S.rows!==rowsRef)break;i++;
-    try{const g=await geocodeRow(r,m,cfg);if(cfg.signal.aborted){i--;break;}apply(r,g,cfg);}
-    catch(e){if(e.name==='AbortError'||cfg.signal.aborted){i--;break;}RES.forEach(c=>r[c]='');r.statut='ERREUR';r.confiance='FAIBLE';r.controle_manuel='OUI';r.controle=e.message;}
+    try{const g=await geocodeRow(r,m,cfg);if(cfg.signal.aborted){i--;break;}apply(r,g,cfg);bad=0;}
+    catch(e){if(e.name==='AbortError'||cfg.signal.aborted){i--;break;}RES.forEach(c=>r[c]='');r.statut='ERREUR';r.confiance='FAIBLE';r.controle_manuel='OUI';r.controle=e.message;
+      if(++bad>=5){halt=true;break;}}
     $('#bar').style.width=(100*i/todo.length)+'%';
     const eta=Math.round((Date.now()-t0)/i*(todo.length-i)/1000);
-    setStatus(`${i}/${todo.length} — reste ~${eta}s\n${summary()}`);render();
+    setStatus(`${i}/${todo.length} — reste ~${eta}s\n${summary()}`);renderSoon();
   }
-  S.running=false;btns();setStatus((i<todo.length?'Arrêté. ':'Terminé. ')+summary());
-  await ensureLevel();fit();
+  S.running=false;btns();setStatus((halt?'Interrompu après 5 erreurs consécutives (réseau ou serveur indisponible). ':i<todo.length?'Arrêté. ':'Terminé. ')+summary(),halt);
+  render();await ensureLevel();fit();
 }
 
 function view(){
@@ -609,7 +640,11 @@ $('#hideIn').onclick=()=>{S.headers.forEach(h=>S.hidden.add(h));buildCols();rend
 const stampNow=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 $('#expCsv').onclick=()=>{
   const {cols,rows}=view(),out=$('#expVisible').checked?cols:allCols();
-  const q=v=>{v=String(v??'');return /[;"\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const q=v=>{
+    if(typeof v==='number')return String(v).replace('.',',');            // décimale française (Excel FR)
+    v=String(v??'');
+    if(/^[=+\-@\t\r]/.test(v)&&!/^-?\d+([.,]\d+)?$/.test(v))v="'"+v;      // neutralise les formules
+    return /[;"\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
   const csv='\uFEFF'+[out.map(q).join(';'),...rows.map(r=>out.map(c=>q(r[c])).join(';'))].join('\r\n')+'\r\n';
   download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`nuts_resultat_${stampNow()}.csv`);
 };
@@ -780,6 +815,9 @@ function runSelfTests(){
   T(cpMatch('BE','1030','1030')===true,'CP identique');T(cpMatch('ES','15143','15142')==='near','CP voisin ES');
   T(cpMatch('BE','1030','1210')===false,'CP différent');T(cpMatch('GB','SW1Y 4PD','SW1Y 4LE')===true,'UK même district');
   T(cpMatch('GB','CV3 4LF','CV1 1LL')===false,'UK district différent');T(cpMatch('BE','1030','')===null,'CP absent');
+  T(isoOf('Belgique')==='BE'&&isoOf('Deutschland')==='DE'&&isoOf('Royaume-Uni')==='GB'&&isoOf('Tchéquie')==='CZ','pays en toutes lettres');
+  T(isoOf('uk')==='GB'&&isoOf('EL')==='GR'&&isoOf('Atlantide')==='','codes ISO / pays inconnu');
+  T(cpMatch('BE','1030','1040')===false,'BE : CP à 4 chiffres, pas de « voisin »');T(cpMatch('RO','400027','400029')==='near','RO : CP voisin');
   T(fixCp('13329','RO').cp==='013329','zéro initial RO');T(fixCp('2515','PL').cp==='02-515','zéro initial PL');T(fixCp('1030','BE').cp==='1030','BE inchangé');
   T(stripAbbr('ul. Chemików 7')==='Chemików 7','abréviation ul.');T(stripAbbr("1 St James's Square")==="1 St James's Square",'pas de faux positif');
   T(niveauOf(30,'building')==='BATIMENT','niveau bâtiment');T(niveauOf(26,'road')==='RUE','niveau rue');
