@@ -214,7 +214,7 @@ Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut)
 
 ## Numéro de version
 
-Le pied de page de l'application affiche « NUTS Locator v… (date) ». Après une mise à jour de la page publiée (GitHub Pages met une à deux minutes à se rafraîchir), comparez ce numéro à celui de la dernière version fusionnée ; s'il est ancien, rechargez sans le cache du navigateur. Pour publier une nouvelle version, modifier `src/version.js` (`VERSION`, `VERSION_DATE`) et `version` dans `package.json` : un test vérifie que les deux concordent.
+L'application affiche « v… » à côté du titre, en haut de page, et « NUTS Locator v… (date) » dans le pied de page. Après une mise à jour de la page publiée (GitHub Pages met une à deux minutes à se rafraîchir), comparez ce numéro à celui de la dernière version fusionnée ; s'il est ancien, rechargez sans le cache du navigateur. Pour publier une nouvelle version, modifier `src/version.js` (`VERSION`, `VERSION_DATE`) et `version` dans `package.json` : un test vérifie que les deux concordent.
 
 ## Sources et licences
 

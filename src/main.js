@@ -24,6 +24,7 @@ initLayout();
 initSession();
 initPostcodes();
 document.getElementById('ver').textContent=`NUTS Locator v${VERSION} (${VERSION_DATE}) ·`;
+document.getElementById('verTop').textContent=`v${VERSION}`;      // aussi en haut de page : sur mobile le pied de page est tout en bas
 
 buildMap();
 btns();

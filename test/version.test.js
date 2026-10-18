@@ -9,6 +9,7 @@ test('version : src/version.js et package.json concordent, format x.y.z et date 
   assert.match(VERSION,/^\d+\.\d+\.\d+$/);assert.match(VERSION_DATE,/^\d{4}-\d{2}-\d{2}$/);
 });
 
-test('version : le pied de page prévoit son emplacement',()=>{
-  assert.match(readFileSync(new URL('../index.html',import.meta.url),'utf8'),/<span id="ver"><\/span>/);
+test('version : le pied de page et l\'en-tête prévoient leur emplacement',()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  assert.match(html,/<span id="ver"><\/span>/);assert.match(html,/id="verTop"/);
 });
