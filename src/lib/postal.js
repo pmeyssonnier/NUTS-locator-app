@@ -59,9 +59,10 @@ export function niveauOf(rank,atype){
 //                    Un CP voisin (2 derniers caractères) n'abaisse pas la confiance : avec un bâtiment exact, c'est le CP d'OpenStreetMap qui diffère.
 export function decide(q){
   const fine=q.precise&&(q.niveau==='BATIMENT'||q.niveau==='RUE'||q.niveau==='INCONNU');
+  // q.cpNutsKo : le NUTS 3 du point diffère de celui de la table Eurostat des codes postaux (millésimes identiques)
   // q.loose : adresse trouvée après avoir ignoré un complément (« Whitley ») qui pouvait désigner un autre quartier
-  const statut=q.paysKo?'PAYS_INCOHERENT':(!fine||q.cpKo||q.loose)?'A_VERIFIER':!q.exact?'NUTS_PROCHE':'OK';
-  const confiance=(q.paysKo||!fine)?'FAIBLE':(q.cpKo||q.loose||!q.exact||q.niveau!=='BATIMENT')?'MOYENNE':'HAUTE';
+  const statut=q.paysKo?'PAYS_INCOHERENT':(!fine||q.cpKo||q.loose||q.cpNutsKo)?'A_VERIFIER':!q.exact?'NUTS_PROCHE':'OK';
+  const confiance=(q.paysKo||!fine)?'FAIBLE':(q.cpKo||q.loose||q.cpNutsKo||!q.exact||q.niveau!=='BATIMENT')?'MOYENNE':'HAUTE';
   return {statut,confiance,controle_manuel:confiance==='HAUTE'?'NON':'OUI'};
 }
 // abréviations de type de voie retirées pour un second essai (ul., al., pl., os., str., tř., nám., bd.)

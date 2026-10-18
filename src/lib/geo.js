@@ -27,3 +27,12 @@ export function findNuts(nuts,lon,lat,maxKm=0){
     for(const p of f.polys)for(const ring of p){const d=distRingKm(lon,lat,ring);if(d<bd){bd=d;best=f;}}}
   return best&&bd<=maxKm?{id:best.id,exact:false,v:best.v,km:Math.round(bd*100)/100}:null;
 }
+// distance (km) d'un point à la zone NUTS d'identifiant donné (0 si le point est dedans ; Infinity si la zone n'est pas chargée)
+export function distToNutsKm(nuts,id,lon,lat){
+  const f=nuts.find(z=>z.id===id);if(!f)return Infinity;
+  let best=Infinity;
+  for(const p of f.polys){
+    if(inRing(lon,lat,p[0])&&!p.slice(1).some(h=>inRing(lon,lat,h)))return 0;
+    const d=distRingKm(lon,lat,p[0]);if(d<best)best=d;}
+  return Math.round(best*100)/100;
+}

@@ -8,6 +8,7 @@ import {initCache} from './ui/cache.js';
 import {initExports} from './ui/exports.js';
 import {initLayout} from './ui/layout.js';
 import {initSession} from './ui/session.js';
+import {initPostcodes} from './ui/postcodes.js';
 import {btns} from './ui/controls.js';
 import {runSelfTests} from './ui/selftests.js';
 
@@ -20,6 +21,7 @@ initCache();
 initExports();
 initLayout();
 initSession();
+initPostcodes();
 
 buildMap();
 btns();

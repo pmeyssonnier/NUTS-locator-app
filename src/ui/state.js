@@ -2,7 +2,7 @@ import {RES, summarize} from '../lib/geocode.js';
 import {norm} from '../lib/util.js';
 import {$} from './dom.js';
 
-export const S={headers:[],rows:[],hidden:new Set(),sortCol:null,sortDir:1,filter:'',running:false,nuts:null,nutsRes:null,names:null,last:0,levels:{},selRow:null,strategy:{},cards:matchMedia('(max-width:720px)').matches,cardsMax:60};
+export const S={headers:[],rows:[],hidden:new Set(),sortCol:null,sortDir:1,filter:'',running:false,nuts:null,nutsRes:null,names:null,last:0,levels:{},selRow:null,strategy:{},postal:{},cards:matchMedia('(max-width:720px)').matches,cardsMax:60};
 export const FIELDS=[['adr','Adresse (rue)',/^(adresse|address|rue|street|straat|strasse|via|calle|indirizzo)/],
  ['num','Numéro (optionnel)',/^(n°|no|num|numero|nr|huisnummer|hausnummer)\.?$/],
  ['cp','Code postal',/(code.?postal|postcode|postal|zip|plz|^cp$|^npa$)/],
