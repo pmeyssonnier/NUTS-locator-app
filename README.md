@@ -62,6 +62,48 @@ Le millésime de la table (NUTS 2021, 2024…) est lu dans le nom du fichier (`�
 
 **Formats par pays** (fichier tous pays, vérifiés) : code à 4 chiffres (AT, BE, CH, DK, HU, LU, NO, SI…), 5 chiffres (DE, ES, FR, IT, GR…), `NNN NN` (CZ, SK, SE), `NN-NNN` (PL), `NNNN-NNN` (PT), `NNNN AA` (NL, 464 890 codes), `LV-NNNN` (LV), clés de routage à 3 caractères pour l'Irlande (`D02`) et Malte (`MTP`). Les espaces et tirets sont ignorés à la comparaison ; une adresse néerlandaise ou portugaise qui n'a que les 4 premiers chiffres est comparée aux NUTS 3 des codes qui commencent par eux ; un Eircode complet est ramené à sa clé de routage. Le Royaume-Uni n'est pas dans les tables 2024.
 
+**Concordance par pays selon Eurostat** (notes méthodologiques, tableau 2 : contrôle sur un échantillon de codes postaux de chaque pays, comparé à trois sources indépendantes — Azure Maps, Bing Maps et les districts postaux TomTom) :
+
+| Pays | Échantillon | Azure Maps | Bing Maps | TomTom |
+|---|--:|--:|--:|--:|
+| AT | 209 | 99 % | 100 % | 100 % |
+| BE | 108 | 92 % | 93 % | 92 % |
+| BG | 116 | 84 % | 85 % | 85 % |
+| CH | 307 | 92 % | 92 % | 92 % |
+| CY | 107 | 65 % | 64 % | 65 % |
+| CZ | 277 | 93 % | 93 % | 93 % |
+| DE | 829 | 95 % | 95 % | 95 % |
+| DK | 100 | 88 % | 91 % | 86 % |
+| EE | 543 | 93 % | 95 % | 95 % |
+| EL | 98 | 72 % | 71 % | 70 % |
+| ES | 1 114 | 75 % | 75 % | 75 % |
+| FI | 329 | 78 % | 78 % | 78 % |
+| FR | 581 | 97 % | 97 % | 97 % |
+| HR | 36 | 100 % | 100 % | 100 % |
+| HU | 291 | 91 % | 90 % | 91 % |
+| IT | 473 | 93 % | 93 % | 92 % |
+| LI | 8 | 100 % | 100 % | 100 % |
+| LT | 203 | 51 % | 53 % | 29 % |
+| LV | 70 | 77 % | 76 % | 76 % |
+| MT | 10 | 90 % | 80 % | 90 % |
+| NL | 45 627 | 99 % | 89 % | 99 % |
+| NO | 475 | 62 % | 63 % | 63 % |
+| PL | 466 | 80 % | 80 % | 77 % |
+| PT | 3 968 | 96 % | 41 % | 96 % |
+| RO | 71 | 80 % | 80 % | 77 % |
+| RS | 115 | 82 % | 81 % | 82 % |
+| SE | 1 889 | 7 % | 7 % | 7 % |
+| SI | 53 | 79 % | 79 % | 81 % |
+| SK | 150 | 77 % | 77 % | 77 % |
+| TR | 284 | 38 % | 38 % | 36 % |
+
+À lire avec prudence :
+- les pourcentages du tableau d'Eurostat correspondent en réalité au nombre de codes postaux **retrouvés** par la source de comparaison rapporté à l'échantillon (par exemple SE : 134 retrouvés sur 1 889, soit 7 %), et non à un taux d'erreur de la table. Une valeur basse (SE, LT, TR, NO, CY) traduit surtout une couverture faible de la source de comparaison, pas forcément des erreurs de la table ; elle signifie que le contrôle d'Eurostat est peu concluant pour ces pays ;
+- le chiffre faible de Bing pour le Portugal (41 %) vient de la couverture de Bing (1 628 codes retrouvés sur 3 968), pas de la table ;
+- Irlande, Islande, Luxembourg et Macédoine du Nord ne figurent pas dans ce tableau ;
+- Eurostat précise que la position des codes postaux n'est pas exacte à 100 % et que la couverture n'est pas complète (codes absents, codes non géographiques) ;
+- plus de 97 % des codes postaux viennent de sources officielles (services postaux, adresses officielles, tables de correspondance) ; le reste vient d'OpenStreetMap ou de Geonames. Selon le tableau 1 du document, la quasi-totalité des codes de la Roumanie, de la Suède, de la Serbie, de la Macédoine du Nord et de l'Irlande vient de Geonames ; en Lituanie, 5 603 codes sur 7 697 ont été localisés manuellement, et la Grèce, la Turquie et la majorité de la Pologne reprennent l'édition 2020 des données GISCO.
+
 **État du prototype** :
 - Testé sur le fichier français `pc2025_FR_NUTS-2024_v1.0` et sur le fichier tous pays `PCODE_2025_NUTS-2024_v2.0` : aucun code postal n'y a plusieurs NUTS 3 ; la même chaîne de code existe dans plusieurs pays (19 578 cas, par exemple `60315` en Allemagne et en Lituanie), d'où une table par pays. Format : en-tête `NUTS3;CODE`, valeurs entre apostrophes, NUTS en première colonne, BOM UTF-8.
 - Le lecteur reste tolérant (séparateur, guillemets, ordre des colonnes, plusieurs NUTS 3 par code postal). Un code postal à plusieurs NUTS 3 est traité comme confirmé si l'un d'eux correspond.
