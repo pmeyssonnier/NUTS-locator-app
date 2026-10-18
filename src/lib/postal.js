@@ -54,13 +54,14 @@ export function niveauOf(rank,atype){
 //  PAYS_INCOHERENT : pays trouvé ou NUTS0 ≠ pays saisi
 //  A_VERIFIER      : repli CP/ville, résultat de niveau localité/ville/CP, ou CP franchement différent
 //  NUTS_PROCHE     : point hors contour mais dans la tolérance
-//  OK              : sinon. Confiance HAUTE seulement si bâtiment trouvé, CP identique, point dans le contour ;
-//                    MOYENNE si rue sans numéro, CP voisin ou zone proche. controle_manuel = OUI dès que confiance ≠ HAUTE.
+//  OK              : sinon. Confiance HAUTE seulement si bâtiment trouvé, CP identique ou voisin, point dans le contour ;
+//                    MOYENNE si rue sans numéro, zone proche ou complément ignoré. controle_manuel = OUI dès que confiance ≠ HAUTE.
+//                    Un CP voisin (2 derniers caractères) n'abaisse pas la confiance : avec un bâtiment exact, c'est le CP d'OpenStreetMap qui diffère.
 export function decide(q){
   const fine=q.precise&&(q.niveau==='BATIMENT'||q.niveau==='RUE'||q.niveau==='INCONNU');
   // q.loose : adresse trouvée après avoir ignoré un complément (« Whitley ») qui pouvait désigner un autre quartier
   const statut=q.paysKo?'PAYS_INCOHERENT':(!fine||q.cpKo||q.loose)?'A_VERIFIER':!q.exact?'NUTS_PROCHE':'OK';
-  const confiance=(q.paysKo||!fine)?'FAIBLE':(q.cpKo||q.cpNear||q.loose||!q.exact||q.niveau!=='BATIMENT')?'MOYENNE':'HAUTE';
+  const confiance=(q.paysKo||!fine)?'FAIBLE':(q.cpKo||q.loose||!q.exact||q.niveau!=='BATIMENT')?'MOYENNE':'HAUTE';
   return {statut,confiance,controle_manuel:confiance==='HAUTE'?'NON':'OUI'};
 }
 // abréviations de type de voie retirées pour un second essai (ul., al., pl., os., str., tř., nám., bd.)

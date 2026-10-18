@@ -59,11 +59,11 @@ export function applyResult(r,g,cfg,nuts,names){
   const precise=g.prec==='ADRESSE'||g.prec==='ADRESSE_LIBRE';
   if(!precise)notes.push(g.prec==='VILLE'?'localisé au centre de la ville seulement':'localisé au centre du code postal seulement');
   else if(r.niveau_resultat!=='BATIMENT')notes.push(NIV_TXT[r.niveau_resultat]);
-  let paysKo=false,cpKo=false,cpNear=false;
+  let paysKo=false,cpKo=false;
   if(g.iso&&g.cc&&ccOf(g.cc)!==g.iso){paysKo=true;notes.push(`pays trouvé ${g.cc} ≠ pays saisi ${g.iso}`);}
   const cm=cpMatch(g.iso,g.cpIn,g.postcode);
   if(cm===false){cpKo=true;notes.push(`CP trouvé ${g.postcode} ≠ CP saisi ${g.cpIn}`);}
-  else if(cm==='near'){cpNear=true;notes.push(`CP voisin (trouvé ${g.postcode}, saisi ${g.cpIn})`);}
+  else if(cm==='near'){notes.push(`CP voisin (trouvé ${g.postcode}, saisi ${g.cpIn})`);}
   else if(cm===null&&g.cpIn&&precise)notes.push('CP non renvoyé par le géocodeur');
   // complément ignoré : doute sur le quartier, levé si le code postal saisi est retrouvé à l'identique
   const cpSame=!!normCp(g.cpIn)&&normCp(g.cpIn)===normCp(g.postcode);
@@ -79,7 +79,7 @@ export function applyResult(r,g,cfg,nuts,names){
   r.NUTS_version=n.v||'2024';r.distance_nuts_km=n.km;
   if(g.iso&&r.NUTS0!==nuts0Of(g.iso)&&!paysKo){paysKo=true;notes.push(`zone NUTS ${r.NUTS0} ≠ pays saisi ${g.iso}`);}
   if(!n.exact)notes.push(`point hors contour, zone la plus proche à ${n.km} km`);
-  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,cpNear,loose,exact:n.exact}));
+  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,loose,exact:n.exact}));
 }
 export function summarize(rows){
   const c={},f={},v=new Set();rows.forEach(r=>{const k=r.statut||'NON_TRAITE';c[k]=(c[k]||0)+1;if(r.confiance)f[r.confiance]=(f[r.confiance]||0)+1;if(r.NUTS_version)v.add(r.NUTS_version);});
