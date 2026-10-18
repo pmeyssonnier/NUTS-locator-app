@@ -1,8 +1,9 @@
 import {findNuts} from './geo.js';
+import {compareCpNuts, lookupPostcode} from './postcodes.js';
 import {cc, ccList, ccOf, cpMatch, decide, fixCp, isoOf, niveauOf, normCp, nuts0Of, streetOf, stripAbbr, stripLocality} from './postal.js';
 
 // --- Géocodage d'une ligne et rattachement NUTS : fonctions pures, le géocodeur (geocode) et les contours (nuts, names) sont injectés ---
-export const RES=['precision','niveau_resultat','lat','lon','adresse_geocodee','cp_trouve','pays_trouve','NUTS0','NUTS0_nom','NUTS1','NUTS1_nom','NUTS2','NUTS2_nom','NUTS3','NUTS3_nom','NUTS_version','distance_nuts_km','confiance','controle_manuel','controle','statut'];
+export const RES=['precision','niveau_resultat','lat','lon','adresse_geocodee','cp_trouve','pays_trouve','NUTS0','NUTS0_nom','NUTS1','NUTS1_nom','NUTS2','NUTS2_nom','NUTS3','NUTS3_nom','NUTS_version','distance_nuts_km','NUTS3_codepostal','controle_cp_nuts','confiance','controle_manuel','controle','statut'];
 export const val=(r,c)=>c?String(r[c]??'').trim():'';
 export const NIV_TXT={RUE:'rue trouvée, pas le numéro',LOCALITE:'résultat au niveau quartier/localité',VILLE_OU_PLUS:'résultat au niveau ville ou plus large',CODE_POSTAL:'résultat au niveau code postal',INCONNU:'niveau du résultat non communiqué'};
 // Variantes de la rue, de la plus fidèle à la plus simplifiée ; chacune est essayée en recherche structurée puis libre
@@ -49,7 +50,7 @@ export async function geocodeRow(r,m,cfg,geocode){
   }
   return fallback||{fail:true,iso,notes};
 }
-export function applyResult(r,g,cfg,nuts,names){
+export function applyResult(r,g,cfg,nuts,names,postal){
   RES.forEach(c=>r[c]='');
   const notes=[...(g.notes||[])];
   const done=d=>{Object.assign(r,d);r.controle=notes.join(' ; ');};
@@ -79,7 +80,19 @@ export function applyResult(r,g,cfg,nuts,names){
   r.NUTS_version=n.v||'2024';r.distance_nuts_km=n.km;
   if(g.iso&&r.NUTS0!==nuts0Of(g.iso)&&!paysKo){paysKo=true;notes.push(`zone NUTS ${r.NUTS0} ≠ pays saisi ${g.iso}`);}
   if(!n.exact)notes.push(`point hors contour, zone la plus proche à ${n.km} km`);
-  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,loose,exact:n.exact}));
+  // contrôle croisé (facultatif) avec la table Eurostat « code postal → NUTS 3 » importée pour ce pays
+  let cpNutsKo=false;
+  const table=postal?.[g.iso];
+  if(table){
+    const cand=lookupPostcode(table,g.cpIn,g.iso)||lookupPostcode(table,g.postcode,g.iso);
+    const acc=compareCpNuts(cand,r.NUTS3,table.nutsVersion,r.NUTS_version);
+    r.controle_cp_nuts=acc;r.NUTS3_codepostal=(cand||[]).join('|');
+    if(acc==='OUI')notes.push('NUTS 3 confirmé par la table Eurostat des codes postaux');
+    else if(acc==='NON'||acc==='MEME_NUTS2'){cpNutsKo=true;notes.push(`NUTS 3 du point (${r.NUTS3}) ≠ NUTS 3 du code postal (${cand.join('|')})${acc==='MEME_NUTS2'?', même NUTS 2':''} : à vérifier`);}
+    else if(acc==='VERSION_DIFFERENTE')notes.push(`NUTS 3 du point (${r.NUTS3}, NUTS ${r.NUTS_version}) ≠ code postal (${cand.join('|')}, NUTS ${table.nutsVersion||'?'}) : millésimes différents, non concluant`);
+    else notes.push('code postal absent de la table Eurostat');
+  }
+  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,loose,cpNutsKo,exact:n.exact}));
 }
 export function summarize(rows){
   const c={},f={},v=new Set();rows.forEach(r=>{const k=r.statut||'NON_TRAITE';c[k]=(c[k]||0)+1;if(r.confiance)f[r.confiance]=(f[r.confiance]||0)+1;if(r.NUTS_version)v.add(r.NUTS_version);});

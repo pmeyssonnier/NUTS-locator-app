@@ -6,6 +6,7 @@ export * from './keys.js';
 export * from './mapmath.js';
 export * from './markers.js';
 export * from './postal.js';
+export * from './postcodes.js';
 export * from './sample.js';
 export * from './util.js';
 export * from './xlsx.js';

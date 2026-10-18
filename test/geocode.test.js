@@ -339,3 +339,61 @@ test('applyResult : CP à 4 chiffres (BE) : pas de « voisin », donc inchangé'
   const r=apply(G({postcode:'1040',cpIn:'1000'}));
   assert.equal(r.statut,'A_VERIFIER');assert.doesNotMatch(r.controle,/CP voisin/);
 });
+
+// ---------- Contrôle croisé avec la table Eurostat des codes postaux (prototype) ----------
+const tbl=(entries,nutsVersion='2024')=>({iso:'BE',nutsVersion,source:'t.csv',entries,count:Object.keys(entries).length,multi:0,skipped:0});
+const applyP=(g,postal)=>{const r={};L.RES.forEach(c=>r[c]='');L.applyResult(r,g,CFG,NUTS,NAMES,postal);return r;};
+
+test('RES : les deux colonnes du contrôle croisé existent, vides sans table',()=>{
+  assert.ok(L.RES.includes('NUTS3_codepostal')&&L.RES.includes('controle_cp_nuts'));
+  const r=applyP(G(),undefined);
+  assert.equal(r.NUTS3_codepostal,'');assert.equal(r.controle_cp_nuts,'');assert.equal(r.statut,'OK');assert.doesNotMatch(r.controle,/table Eurostat/);
+});
+
+test('contrôle croisé : même NUTS 3 → confirmé, statut inchangé',()=>{
+  const r=applyP(G(),{BE:tbl({'1000':['BE100']})});
+  assert.equal(r.controle_cp_nuts,'OUI');assert.equal(r.NUTS3_codepostal,'BE100');
+  assert.equal(r.statut,'OK');assert.equal(r.confiance,'HAUTE');assert.match(r.controle,/NUTS 3 confirmé par la table Eurostat des codes postaux/);
+});
+
+test('contrôle croisé : désaccord à millésime identique → A_VERIFIER / MOYENNE avec les deux codes',()=>{
+  const r=applyP(G(),{BE:tbl({'1000':['BE242']})});                                  // le point est dans BE100
+  assert.equal(r.controle_cp_nuts,'NON');assert.equal(r.statut,'A_VERIFIER');assert.equal(r.confiance,'MOYENNE');assert.equal(r.controle_manuel,'OUI');
+  assert.match(r.controle,/NUTS 3 du point \(BE100\) ≠ NUTS 3 du code postal \(BE242\) : à vérifier/);
+  assert.equal(r.NUTS3,'BE100');assert.equal(r.NUTS3_codepostal,'BE242');           // les deux valeurs restent visibles
+});
+
+test('contrôle croisé : NUTS 3 voisin de la même région → A_VERIFIER, mention « même NUTS 2 »',()=>{
+  const r=applyP(G(),{BE:tbl({'1000':['BE101']})});
+  assert.equal(r.controle_cp_nuts,'MEME_NUTS2');assert.equal(r.statut,'A_VERIFIER');assert.match(r.controle,/même NUTS 2/);
+});
+
+test('contrôle croisé : millésimes différents → note seulement, le statut ne change pas',()=>{
+  const r=applyP(G(),{BE:tbl({'1000':['BE242']},'2021')});
+  assert.equal(r.controle_cp_nuts,'VERSION_DIFFERENTE');assert.equal(r.statut,'OK');assert.equal(r.confiance,'HAUTE');
+  assert.match(r.controle,/millésimes différents, non concluant/);assert.match(r.controle,/NUTS 2024/);assert.match(r.controle,/NUTS 2021/);
+  const inconnu=applyP(G(),{BE:tbl({'1000':['BE242']},'')});
+  assert.equal(inconnu.statut,'OK');assert.match(inconnu.controle,/NUTS \?/);       // millésime de la table inconnu
+});
+
+test('contrôle croisé : code postal absent de la table → note, statut inchangé',()=>{
+  const r=applyP(G(),{BE:tbl({'3000':['BE242']})});
+  assert.equal(r.controle_cp_nuts,'CP_ABSENT');assert.equal(r.NUTS3_codepostal,'');assert.equal(r.statut,'OK');assert.match(r.controle,/absent de la table Eurostat/);
+});
+
+test('contrôle croisé : table d\'un autre pays ignorée ; le pays prime toujours',()=>{
+  const autre=applyP(G(),{NL:{...tbl({'1000':['NL329']}),iso:'NL'}});
+  assert.equal(autre.controle_cp_nuts,'');assert.equal(autre.statut,'OK');
+  const pays=applyP(G({cc:'NL'}),{BE:tbl({'1000':['BE242']})});
+  assert.equal(pays.statut,'PAYS_INCOHERENT');
+});
+
+test('contrôle croisé : repli sur le code postal trouvé quand le code saisi est absent',()=>{
+  const r=applyP(G({cpIn:'1001',postcode:'1000'}),{BE:tbl({'1000':['BE100']})});
+  assert.equal(r.controle_cp_nuts,'OUI');
+});
+
+test('contrôle croisé : un code postal à plusieurs NUTS 3 est confirmé si l\'un d\'eux correspond',()=>{
+  const r=applyP(G(),{BE:tbl({'1000':['BE242','BE100']})});
+  assert.equal(r.controle_cp_nuts,'OUI');assert.equal(r.NUTS3_codepostal,'BE242|BE100');
+});

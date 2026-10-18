@@ -8,7 +8,7 @@ import {render, renderSoon} from './render.js';
 import {saveSession} from './session.js';
 import {getMap, lkey, S, summary, ukOn} from './state.js';
 
-const apply=(r,g,cfg)=>applyResult(r,g,cfg,S.nuts,S.names);
+const apply=(r,g,cfg)=>applyResult(r,g,cfg,S.nuts,S.names,S.postal);
 export async function run(){
   const m=getMap();if(!m.adr&&!m.cp&&!m.ville){setStatus('Indiquez au moins la colonne Adresse, Code postal ou Ville.',true);return;}
   const cfg={nomUrl:$('#nomUrl').value,email:$('#email').value.trim(),defPays:$('#defPays').value,maxKm:Math.max(0,+$('#maxKm').value||0),uk:ukOn(),memory:S.strategy};

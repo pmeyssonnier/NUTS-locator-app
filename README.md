@@ -32,6 +32,30 @@ Pour chaque ligne, l'application essaie la rue sous plusieurs formes, de la plus
 
 L'ordre des essais est **appris pays par pays** pendant la session : un essai qui n'a jamais réussi pour un pays après deux échecs passe en dernier recours (il reste tenté s'il le faut, et reprend sa place dès qu'il réussit). Cela évite, par exemple, de perdre une requête par ligne quand la recherche structurée n'aboutit jamais pour la Pologne ou la Tchéquie. Seuls les résultats au niveau de la rue ou du bâtiment servent à apprendre. Les libellés Eurostat sont nettoyés (espaces en trop retirés).
 
+## Contrôle croisé avec les codes postaux Eurostat (prototype)
+
+En option, l'application compare le NUTS 3 trouvé par la **position du point** à celui que donne le **code postal** dans les tables « code postal → NUTS » publiées par Eurostat (fichiers à plat Tercet, page « Postal codes » de GISCO). Les deux méthodes étant indépendantes, un désaccord signale un point mal placé ou un code postal erroné.
+
+**Utilisation** : dans « Colonnes & géocodage », importez la table d'un pays avec « Tables code postal → NUTS 3 » : le `.zip` tel que téléchargé (par exemple `pc2025_FR_NUTS-2024_v1.0.zip`) ou son `.csv`. Les tables sont conservées dans le navigateur (« Retirer les tables » les efface) et lues localement : elles ne sont jamais envoyées nulle part. Sans table, rien ne change.
+
+**Résultat** : deux colonnes sont ajoutées, `NUTS3_codepostal` (le ou les NUTS 3 de la table) et `controle_cp_nuts` :
+
+| `controle_cp_nuts` | Signification | Effet sur le statut |
+|---|---|---|
+| `OUI` | même NUTS 3 | aucun (note « confirmé ») |
+| `NON` | NUTS 3 différent | `A_VERIFIER`, confiance `MOYENNE` au plus |
+| `MEME_NUTS2` | NUTS 3 voisin, même région NUTS 2 | `A_VERIFIER`, confiance `MOYENNE` au plus |
+| `VERSION_DIFFERENTE` | désaccord, mais millésimes NUTS différents (ou inconnu) : non concluant | aucun (note) |
+| `CP_ABSENT` | code postal absent de la table | aucun (note) |
+
+Le millésime de la table (NUTS 2021, 2024…) est lu dans le nom du fichier (`…_NUTS-2024_…`) et comparé à celui des contours (2024, ou 2021 pour le Royaume-Uni). Ne renommez pas le fichier : sans millésime, un désaccord reste non concluant.
+
+**État du prototype** :
+- Testé sur le fichier français `pc2025_FR_NUTS-2024_v1.0` : 6 261 codes postaux, 101 NUTS 3, un seul NUTS 3 par code postal, lecture en quelques dizaines de millisecondes. Format observé : en-tête `NUTS3;CODE`, valeurs entre apostrophes, NUTS en première colonne, BOM UTF-8.
+- Le lecteur est tolérant (séparateur, guillemets, ordre des colonnes, plusieurs NUTS 3 par code postal) mais les autres pays n'ont pas été essayés. Un code postal à plusieurs NUTS 3 est traité comme confirmé si l'un d'eux correspond.
+- Les codes « non géographiques » (boîtes postales, codes d'organisation comme les CEDEX) sont absents des tables Eurostat : ils donnent `CP_ABSENT`.
+- Le code postal saisi est utilisé en priorité, puis celui trouvé par le géocodeur.
+
 ## Statut et confiance
 
 | Statut | Signification |
@@ -87,11 +111,13 @@ src/lib/            logique pure, sans DOM ni réseau (importable par Node)
   geo.js                   point dans polygone, distance, rattachement NUTS
   postal.js                pays, codes postaux, ordre numéro/rue, règle de statut
   geocode.js               stratégie de géocodage d'une ligne, rattachement NUTS, synthèse
+  postcodes.js             tables Eurostat code postal → NUTS 3 : lecture, recherche, comparaison
   markers.js keys.js mapmath.js util.js sample.js   marqueurs, touches, zoom, outils, exemple
   index.js                 point d'entrée unique de la logique pure
 src/ui/             interface (DOM)
   dom.js state.js storage.js     utilitaires, état partagé, IndexedDB et préférences
   nuts.js nominatim.js           contours GISCO, appels Nominatim (cache, limite de débit)
+  postcodes.js                   import des tables code postal → NUTS (zip ou csv)
   rows.js table.js map.js        fiche d'une ligne, tableau et cartes, carte canvas
   render.js select.js            rendu d'ensemble, sélection d'une ligne
   files.js run.js cache.js results.js exports.js session.js layout.js controls.js   fonctions de l'application
@@ -116,7 +142,7 @@ Les tests Node importent directement `src/lib/` : ils exécutent le code réelle
 
 Les tests tournent aussi automatiquement sur GitHub (Actions, Node 20 et 22) à chaque push sur `main` et à chaque pull request : voir `.github/workflows/test.yml`.
 
-Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/markers.test.js` (formes et couleurs des points), `test/mobile.test.js` (zoom au pincement, tuiles, pagination des cartes), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé).
+Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/markers.test.js` (formes et couleurs des points), `test/mobile.test.js` (zoom au pincement, tuiles, pagination des cartes), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé), `test/postcodes.test.js` (tables code postal → NUTS : lecture, recherche, comparaison).
 
 ## Sources et licences
 
