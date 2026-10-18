@@ -25,6 +25,7 @@ async function restoreSession(s){
   buildCols();
   $('#loaded').textContent=`${s.label||'Session restaurée'} : ${S.rows.length} lignes, ${S.headers.length} colonnes.`;
   render();btns();setStatus('Session restaurée.\n'+summary());
+  document.dispatchEvent(new Event('nuts:restored'));      // les tables importées sont alors appliquées aux lignes restaurées (voir ui/postcodes.js)
   await ensureLevel();fit();
 }
 export function initSession(){

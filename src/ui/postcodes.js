@@ -60,9 +60,14 @@ export function initPostcodes(){
     const m=await refresh();if(m)setStatus('Tables code postal → NUTS retirées.\n'+m);
   };
   // tables conservées d'une session précédente
-  dbGet('geo',INDEX).then(async idx=>{
+  const ready=dbGet('geo',INDEX).then(async idx=>{
     for(const iso of idx||[]){const t=await dbGet('geo','pcnuts_'+iso);if(t&&t.entries)S.postal[iso]=t;}
     show();
+  });
+  // session restaurée : ses lignes ont pu être calculées sans les tables (ou avec d'autres) ; on les recalcule avec celles qui sont chargées
+  document.addEventListener('nuts:restored',async()=>{
+    await ready;if(!Object.keys(S.postal).length)return;
+    const m=await refresh();if(m)setStatus('Session restaurée.\n'+m);
   });
   show();refreshStorage();
 }

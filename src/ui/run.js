@@ -61,7 +61,8 @@ export async function run(){
 export function initRun(){
   $('#run').onclick=run;
   // le libellé suit la case, y compris quand le navigateur la restaure cochée à la réouverture de la page
+  $('#noGeo').checked=false;
   const label=()=>{$('#run').textContent=$('#noGeo').checked?'Déterminer le NUTS':'Géocoder';};
-  $('#noGeo').onchange=label;label();addEventListener('pageshow',label);
+  $('#noGeo').onchange=label;label();addEventListener('pageshow',()=>{$('#noGeo').checked=false;label();});   // après la restauration du formulaire par le navigateur
   $('#stop').onclick=()=>{S.running=false;S.ctrl?.abort();};
 }
