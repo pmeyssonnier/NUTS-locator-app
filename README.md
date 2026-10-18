@@ -40,7 +40,7 @@ En option, l'application compare le NUTS 3 trouvé par la **position du point** 
 - un fichier par pays (`pc2025_FR_NUTS-2024_v1.0.zip`) ;
 - le fichier **tous pays** (`PCODE_2025_NUTS-2024_v2.0.zip`, 830 033 codes postaux, 34 pays) : il est réparti par pays d'après le préfixe du code NUTS (UK → GB, EL → GR). Compter 3 à 5 secondes d'analyse ; les tables sont ensuite rechargées en moins d'une seconde.
 
-Les tables sont conservées dans le navigateur (« Retirer les tables » les efface) et lues localement : elles ne sont jamais envoyées nulle part. Sans table, rien ne change.
+Quand plus de trois pays sont chargés, la liste se replie derrière un résumé cliquable (« Tables chargées : 34 pays, 830 033 codes postaux ») ; son état ouvert ou fermé est mémorisé. Les tables sont conservées dans le navigateur (« Retirer les tables » les efface) et lues localement : elles ne sont jamais envoyées nulle part. Sans table, rien ne change.
 
 **Appliquer les tables après coup** : importer ou retirer des tables recalcule aussitôt les lignes déjà géocodées, sans nouvel appel à Nominatim (le résultat brut du géocodeur est gardé avec chaque ligne, y compris dans la session sauvegardée). Restaurer une session recalcule de la même façon ses lignes avec les tables chargées. Les lignes d'une session sauvegardée avant cette fonction n'ont pas ce résultat : le message l'indique, et il faut alors relancer « Géocoder » (en décochant « Seulement les lignes non OK »).
 
