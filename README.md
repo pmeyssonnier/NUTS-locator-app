@@ -42,6 +42,10 @@ En option, l'application compare le NUTS 3 trouvé par la **position du point** 
 
 Les tables sont conservées dans le navigateur (« Retirer les tables » les efface) et lues localement : elles ne sont jamais envoyées nulle part. Sans table, rien ne change.
 
+**Appliquer les tables après coup** : importer ou retirer des tables recalcule aussitôt les lignes déjà géocodées, sans nouvel appel à Nominatim (le résultat brut du géocodeur est gardé avec chaque ligne, y compris dans la session sauvegardée). Les lignes d'une session sauvegardée avant cette fonction n'ont pas ce résultat : le message l'indique, et il faut alors relancer « Géocoder » (en décochant « Seulement les lignes non OK »).
+
+**Conservation des imports** : contours et tables sont gardés dans le navigateur (IndexedDB) et ne s'importent qu'une fois. Une ligne sous les imports indique l'état du stockage : « durable », « non garanti » (le navigateur peut tout effacer : fenêtre privée, nettoyage automatique des données de site, disque presque plein) ou « indisponible » (tout reste en mémoire et est perdu à la fermeture de l'onglet). Les contours importés sont aussi concernés.
+
 **Résultat** : deux colonnes sont ajoutées, `NUTS3_codepostal` (le ou les NUTS 3 de la table) et `controle_cp_nuts` :
 
 | `controle_cp_nuts` | Signification | Effet sur le statut |
