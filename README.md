@@ -35,7 +35,10 @@ La **confiance** (`HAUTE`, `MOYENNE`, `FAIBLE`) mesure la précision de la local
 
 - Seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi. Les autres colonnes restent dans le navigateur.
 - Les réponses du géocodeur et les contours NUTS sont gardés dans le navigateur (IndexedDB). Le bouton « Vider le cache » efface le cache de géocodage.
+- La dernière session (données importées et résultats, sans l'e-mail) est aussi conservée dans le navigateur : au rechargement, un bouton « Restaurer la session » la rétablit, et « Oublier la session » l'efface. Elle est enregistrée pendant le géocodage (toutes les 50 lignes) et à la fin.
 - Le serveur public Nominatim est limité à 1 requête par seconde et n'est pas prévu pour du géocodage massif. Pour de gros volumes, renseignez un serveur Nominatim auto-hébergé.
+- Le numéro est placé avant la rue pour FR, GB, IE et LU, après pour les autres pays.
+- Les territoires d'outre-mer français (Guadeloupe, Martinique, Guyane, Réunion, Mayotte) et Åland sont rattachés à leur pays NUTS0 (FR, FI) : ils ne déclenchent plus de faux `PAYS_INCOHERENT`.
 - Le géocodage s'arrête après 5 erreurs consécutives (réseau ou serveur indisponible).
 - Si GISCO est bloqué par un pare-feu, importez les fichiers `NUTS_RG_…_4326_LEVL_n.geojson` avec « Importer des contours ».
 
