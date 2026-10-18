@@ -8,6 +8,7 @@
 :root{--bg:#f6f7f9;--card:#fff;--ink:#1d2433;--mute:#667085;--line:#e3e6ec;--acc:#1f5eff;--ok:#12805c;--warn:#b45309;--err:#c0262d}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1218;--card:#171b23;--ink:#e6e9ef;--mute:#98a2b3;--line:#2a303b;--acc:#6b93ff;--ok:#3fb984;--warn:#f0a03c;--err:#f06470}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
 header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card)}
 h1{font-size:18px;margin:0}
@@ -71,6 +72,11 @@ footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
       <button id="sampleDl">Télécharger l'exemple (.xlsx)</button>
     </div>
     <div id="loaded" class="muted" style="margin-top:8px">Aucun fichier chargé.</div>
+    <div id="restoreBox" class="row" style="margin-top:8px" hidden>
+      <span id="restoreTxt" class="muted"></span>
+      <button id="restore">Restaurer la session</button>
+      <button id="forget" title="Efface du navigateur les données et résultats de la dernière session">Oublier la session</button>
+    </div>
   </section>
 
   <section class="card">
@@ -99,7 +105,7 @@ footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
     </div>
     <div class="progress"><div id="bar"></div></div>
     <div id="status">Prêt.</div>
-    <p class="notice">Confidentialité : seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi ; noms, prénoms et autres colonnes restent dans votre navigateur. Les réponses du géocodeur et les contours NUTS sont gardés en cache dans ce navigateur (IndexedDB ; bouton « Vider le cache » pour le géocodage) ; le fond de carte charge des tuiles depuis le serveur choisi. Le serveur public Nominatim est limité à 1 requête/s et n'est pas prévu pour du géocodage massif.</p>
+    <p class="notice">Confidentialité : seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi ; noms, prénoms et autres colonnes restent dans votre navigateur. Les réponses du géocodeur et les contours NUTS sont gardés en cache dans ce navigateur (IndexedDB ; bouton « Vider le cache » pour le géocodage) ; la dernière session (données importées et résultats, hors e-mail) y est aussi conservée pour pouvoir être restaurée (bouton « Oublier la session » pour l'effacer) ; le fond de carte charge des tuiles depuis le serveur choisi. Le serveur public Nominatim est limité à 1 requête/s et n'est pas prévu pour du géocodage massif.</p>
   </section>
 
   <section class="card">
@@ -313,6 +319,13 @@ const isoOf=p=>{
   return COUNTRY_ALIASES[p.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()]||'';
 };
 const nuts0Of=iso=>iso==='GB'?'UK':iso==='GR'?'EL':iso;
+// Territoires que Nominatim renvoie sous leur propre code pays mais qui relèvent du NUTS0 d'un autre pays (outre-mer français, Åland)
+const CC_GROUP={gp:'FR',mq:'FR',gf:'FR',re:'FR',yt:'FR',ax:'FI'};
+const ccOf=code=>CC_GROUP[String(code||'').toLowerCase()]||String(code||'').toUpperCase();
+const ccList=iso=>[iso.toLowerCase(),...Object.entries(CC_GROUP).filter(([,v])=>v===iso).map(([k])=>k)].join(',');
+// Ordre numéro/rue attendu par Nominatim : numéro d'abord en FR, GB, IE, LU
+const NUM_FIRST=new Set(['FR','GB','IE','LU']);
+const streetOf=(adr,num,iso)=>(NUM_FIRST.has(iso)?[num,adr]:[adr,num]).filter(Boolean).join(' ');
 const normCp=s=>String(s||'').toUpperCase().replace(/[\s.\-]/g,'');
 function fixCp(cp,iso){
   const n=CP_LEN[iso];if(!n||!/^\d+$/.test(cp)||cp.length>=n)return {cp,note:''};
@@ -400,7 +413,7 @@ const val=(r,c)=>c?String(r[c]??'').trim():'';
 const getMap=()=>Object.fromEntries(FIELDS.map(([k])=>[k,$('#m_'+k).value]));
 function setStatus(t,err){const s=$('#status');s.textContent=t;s.className=err?'err':'';}
 function btns(){$('#run').disabled=S.running||!S.rows.length;$('#stop').disabled=!S.running;$('#exp').disabled=$('#expAno').disabled=$('#expCsv').disabled=$('#expGeo').disabled=!S.rows.length;
-  for(const id of ['#file','#sample','#withUK','#res','#maxKm','#defPays','#nomUrl','#email','#onlyMissing','#clearCache','#geoFiles'])$(id).disabled=S.running;$('#mapBox').querySelectorAll('select').forEach(x=>x.disabled=S.running);}
+  for(const id of ['#file','#sample','#withUK','#res','#maxKm','#defPays','#nomUrl','#email','#onlyMissing','#clearCache','#geoFiles','#restore','#forget'])$(id).disabled=S.running;$('#mapBox').querySelectorAll('select').forEach(x=>x.disabled=S.running);}
 
 function buildMap(){
   $('#mapBox').innerHTML=FIELDS.map(([k,l])=>`<label>${l}<select id="m_${k}"><option value="">—</option>${S.headers.map(h=>`<option>${esc(h)}</option>`).join('')}</select></label>`).join('');
@@ -412,7 +425,7 @@ function loadGrid(grid,label){
   if(grid.length<2){setStatus('Fichier vide ou sans données.',true);return;}
   const seen={};S.headers=grid[0].map((h,i)=>{h=String(h||'').trim()||'Col_'+(i+1);if(RES.includes(h))h+='_src';if(seen[h])h+='_'+(++seen[h]);else seen[h]=1;return h;});
   S.rows=grid.slice(1).map(r=>{const o={};S.headers.forEach((h,i)=>o[h]=String(r[i]??'').trim());RES.forEach(c=>o[c]='');return o;});
-  S.sortCol=null;S.hidden.clear();S.rows.forEach((o,i)=>o.__i=i);S.selRow=null;
+  S.sortCol=null;S.hidden.clear();S.rows.forEach((o,i)=>o.__i=i);S.selRow=null;S.label=label;$('#restoreBox').hidden=true;
   $('#loaded').textContent=`${label} : ${S.rows.length} lignes, ${S.headers.length} colonnes.`;
   buildMap();buildCols();
   const pc=$('#m_pays').value;if(pc&&S.rows.some(r=>/^(uk|gb|united kingdom|royaume-uni|great britain)$/i.test(val(r,pc))))$('#withUK').checked=true;
@@ -421,11 +434,11 @@ function loadGrid(grid,label){
 
 async function okJson(r){if(!r.ok)throw new Error('HTTP '+r.status+' '+r.url);return r.json();}
 // ---- Stockage local : IndexedDB (centaines de Mo) ; repli en mémoire si indisponible (navigation privée, file:// sous Firefox…)
-const DB={p:null,mem:{geo:new Map(),geocode:new Map()},ok:false};
+const DB={p:null,mem:{geo:new Map(),geocode:new Map(),session:new Map()},ok:false};
 function dbOpen(){
   return DB.p??=new Promise(res=>{
-    try{const q=indexedDB.open('nuts-locator',1);
-      q.onupgradeneeded=()=>{const d=q.result;for(const st of ['geocode','geo'])if(!d.objectStoreNames.contains(st))d.createObjectStore(st);};
+    try{const q=indexedDB.open('nuts-locator',2);
+      q.onupgradeneeded=()=>{const d=q.result;for(const st of ['geocode','geo','session'])if(!d.objectStoreNames.contains(st))d.createObjectStore(st);};
       q.onsuccess=()=>{DB.ok=true;res(q.result);};q.onerror=q.onblocked=()=>res(null);}
     catch(e){res(null);}
   });
@@ -506,8 +519,8 @@ async function nominatim(params,cfg){
 }
 async function geocodeRow(r,m,cfg){
   const pays=val(r,m.pays)||cfg.defPays,iso=isoOf(pays),fx=fixCp(val(r,m.cp),iso),cp=fx.cp;
-  const street=[val(r,m.adr),val(r,m.num)].filter(Boolean).join(' '),city=val(r,m.ville);
-  const c=iso?{countrycodes:iso.toLowerCase()}:cc(pays),tries=[],notes=fx.note?[fx.note]:[];
+  const street=streetOf(val(r,m.adr),val(r,m.num),iso),city=val(r,m.ville);
+  const c=iso?{countrycodes:ccList(iso)}:cc(pays),tries=[],notes=fx.note?[fx.note]:[];
   if(street)tries.push(['ADRESSE',{street,postalcode:cp,city,...c}]);
   if(street)tries.push(['ADRESSE_LIBRE',{q:[street,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes}]);
   const s2=street&&stripAbbr(street);
@@ -539,7 +552,7 @@ function apply(r,g,cfg){
   if(!precise)notes.push(g.prec==='VILLE'?'localisé au centre de la ville seulement':'localisé au centre du code postal seulement');
   else if(r.niveau_resultat!=='BATIMENT')notes.push(NIV_TXT[r.niveau_resultat]);
   let paysKo=false,cpKo=false,cpNear=false;
-  if(g.iso&&g.cc&&g.cc!==g.iso){paysKo=true;notes.push(`pays trouvé ${g.cc} ≠ pays saisi ${g.iso}`);}
+  if(g.iso&&g.cc&&ccOf(g.cc)!==g.iso){paysKo=true;notes.push(`pays trouvé ${g.cc} ≠ pays saisi ${g.iso}`);}
   const cm=cpMatch(g.iso,g.cpIn,g.postcode);
   if(cm===false){cpKo=true;notes.push(`CP trouvé ${g.postcode} ≠ CP saisi ${g.cpIn}`);}
   else if(cm==='near'){cpNear=true;notes.push(`CP voisin (trouvé ${g.postcode}, saisi ${g.cpIn})`);}
@@ -579,8 +592,9 @@ async function run(){
     $('#bar').style.width=(100*i/todo.length)+'%';
     const eta=Math.round((Date.now()-t0)/i*(todo.length-i)/1000);
     setStatus(`${i}/${todo.length} — reste ~${eta}s\n${summary()}`);renderSoon();
+    if(i%50===0)saveSession();
   }
-  S.running=false;btns();setStatus((halt?'Interrompu après 5 erreurs consécutives (réseau ou serveur indisponible). ':i<todo.length?'Arrêté. ':'Terminé. ')+summary(),halt);
+  S.running=false;btns();await saveSession();setStatus((halt?'Interrompu après 5 erreurs consécutives (réseau ou serveur indisponible). ':i<todo.length?'Arrêté. ':'Terminé. ')+summary(),halt);
   render();await ensureLevel();fit();
 }
 
@@ -808,6 +822,35 @@ $('#png').onclick=()=>{
 $('#tbody').onclick=e=>{const tr=e.target.closest('tr');if(!tr)return;selectRow(S.rows[+tr.dataset.i],true);$('#mapwrap').scrollIntoView({behavior:'smooth',block:'nearest'});};
 new ResizeObserver(resize).observe($('#mapwrap'));
 
+// ---- Session : données + résultats conservés dans IndexedDB pour survivre à la fermeture de l'onglet
+const SESS='last';
+async function saveSession(){
+  if(!S.rows.length)return;
+  try{await dbPut('session',SESS,{v:1,t:Date.now(),label:S.label||'',headers:S.headers,rows:S.rows,map:getMap(),
+    opts:{defPays:$('#defPays').value,res:$('#res').value,withUK:$('#withUK').checked,maxKm:$('#maxKm').value,onlyMissing:$('#onlyMissing').checked}});}
+  catch(e){}
+}
+async function restoreSession(s){
+  S.headers=s.headers;S.rows=s.rows;S.label=s.label;S.sortCol=null;S.hidden.clear();S.selRow=null;S.rows.forEach((o,i)=>o.__i=i);
+  buildMap();for(const [k,v] of Object.entries(s.map||{}))if(v&&S.headers.includes(v))$('#m_'+k).value=v;
+  const o=s.opts||{};
+  if(o.defPays!=null)$('#defPays').value=o.defPays;
+  if(['01M','03M','10M'].includes(o.res))$('#res').value=o.res;
+  $('#withUK').checked=!!o.withUK;if(o.maxKm!=null)$('#maxKm').value=o.maxKm;$('#onlyMissing').checked=!!o.onlyMissing;
+  buildCols();
+  $('#loaded').textContent=`${s.label||'Session restaurée'} : ${S.rows.length} lignes, ${S.headers.length} colonnes.`;
+  render();btns();setStatus('Session restaurée.\n'+summary());
+  await ensureLevel();fit();
+}
+$('#restore').onclick=async()=>{const s=S.pending;if(!s||S.running)return;S.pending=null;$('#restoreBox').hidden=true;await restoreSession(s);};
+$('#forget').onclick=async()=>{await dbClear('session');S.pending=null;$('#restoreBox').hidden=true;setStatus('Session oubliée.');};
+dbGet('session',SESS).then(s=>{
+  if(!s||!Array.isArray(s.rows)||!s.rows.length||S.rows.length)return;
+  S.pending=s;const done=s.rows.filter(r=>r.statut).length;
+  $('#restoreTxt').textContent=`Session précédente : ${s.label||'fichier'} — ${s.rows.length} lignes, ${done} traitées (${new Date(s.t).toLocaleString('fr-BE')}).`;
+  $('#restoreBox').hidden=false;
+});
+
 buildMap();btns();resize();
 if(location.hash==='#tests')runSelfTests();
 function runSelfTests(){
@@ -817,6 +860,9 @@ function runSelfTests(){
   T(cpMatch('GB','CV3 4LF','CV1 1LL')===false,'UK district différent');T(cpMatch('BE','1030','')===null,'CP absent');
   T(isoOf('Belgique')==='BE'&&isoOf('Deutschland')==='DE'&&isoOf('Royaume-Uni')==='GB'&&isoOf('Tchéquie')==='CZ','pays en toutes lettres');
   T(isoOf('uk')==='GB'&&isoOf('EL')==='GR'&&isoOf('Atlantide')==='','codes ISO / pays inconnu');
+  T(streetOf('Rue de la Paix','12','FR')==='12 Rue de la Paix'&&streetOf('Brouwerijplein','1','BE')==='Brouwerijplein 1'&&streetOf('Rue X','','FR')==='Rue X','numéro avant/après la rue');
+  T(ccOf('re')==='FR'&&ccOf('GP')==='FR'&&ccOf('ax')==='FI'&&ccOf('be')==='BE','outre-mer rattaché au pays');
+  T(ccList('FR')==='fr,gp,mq,gf,re,yt'&&ccList('BE')==='be','countrycodes avec territoires');
   T(cpMatch('BE','1030','1040')===false,'BE : CP à 4 chiffres, pas de « voisin »');T(cpMatch('RO','400027','400029')==='near','RO : CP voisin');
   T(fixCp('13329','RO').cp==='013329','zéro initial RO');T(fixCp('2515','PL').cp==='02-515','zéro initial PL');T(fixCp('1030','BE').cp==='1030','BE inchangé');
   T(stripAbbr('ul. Chemików 7')==='Chemików 7','abréviation ul.');T(stripAbbr("1 St James's Square")==="1 St James's Square",'pas de faux positif');
