@@ -58,8 +58,9 @@ export function niveauOf(rank,atype){
 //                    MOYENNE si rue sans numéro, CP voisin ou zone proche. controle_manuel = OUI dès que confiance ≠ HAUTE.
 export function decide(q){
   const fine=q.precise&&(q.niveau==='BATIMENT'||q.niveau==='RUE'||q.niveau==='INCONNU');
-  const statut=q.paysKo?'PAYS_INCOHERENT':(!fine||q.cpKo)?'A_VERIFIER':!q.exact?'NUTS_PROCHE':'OK';
-  const confiance=(q.paysKo||!fine)?'FAIBLE':(q.cpKo||q.cpNear||!q.exact||q.niveau!=='BATIMENT')?'MOYENNE':'HAUTE';
+  // q.loose : adresse trouvée après avoir ignoré un complément (« Whitley ») qui pouvait désigner un autre quartier
+  const statut=q.paysKo?'PAYS_INCOHERENT':(!fine||q.cpKo||q.loose)?'A_VERIFIER':!q.exact?'NUTS_PROCHE':'OK';
+  const confiance=(q.paysKo||!fine)?'FAIBLE':(q.cpKo||q.cpNear||q.loose||!q.exact||q.niveau!=='BATIMENT')?'MOYENNE':'HAUTE';
   return {statut,confiance,controle_manuel:confiance==='HAUTE'?'NON':'OUI'};
 }
 // abréviations de type de voie retirées pour un second essai (ul., al., pl., os., str., tř., nám., bd.)

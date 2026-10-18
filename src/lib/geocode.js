@@ -1,5 +1,5 @@
 import {findNuts} from './geo.js';
-import {cc, ccList, ccOf, cpMatch, decide, fixCp, isoOf, niveauOf, nuts0Of, streetOf, stripAbbr, stripLocality} from './postal.js';
+import {cc, ccList, ccOf, cpMatch, decide, fixCp, isoOf, niveauOf, normCp, nuts0Of, streetOf, stripAbbr, stripLocality} from './postal.js';
 
 // --- Géocodage d'une ligne et rattachement NUTS : fonctions pures, le géocodeur (geocode) et les contours (nuts, names) sont injectés ---
 export const RES=['precision','niveau_resultat','lat','lon','adresse_geocodee','cp_trouve','pays_trouve','NUTS0','NUTS0_nom','NUTS1','NUTS1_nom','NUTS2','NUTS2_nom','NUTS3','NUTS3_nom','NUTS_version','distance_nuts_km','confiance','controle_manuel','controle','statut'];
@@ -28,8 +28,9 @@ export async function geocodeRow(r,m,cfg,geocode){
   for(const [id,s] of [['raw',base],['abbr',stripAbbr(base)],['comp',short],['abbr+comp',stripAbbr(short)]]){
     if(!s||seen.has(s))continue;seen.add(s);
     const note=VARIANT_NOTES[id]?VARIANT_NOTES[id](s):'';
-    addr.push({key:'ADRESSE:'+id,prec:'ADRESSE',params:{street:s,postalcode:cp,city,...c},note},
-              {key:'ADRESSE_LIBRE:'+id,prec:'ADRESSE_LIBRE',params:free(s),note});
+    const loose=id.includes('comp');                                    // le complément ignoré peut désigner un autre quartier
+    addr.push({key:'ADRESSE:'+id,prec:'ADRESSE',params:{street:s,postalcode:cp,city,...c},note,loose},
+              {key:'ADRESSE_LIBRE:'+id,prec:'ADRESSE_LIBRE',params:free(s),note,loose});
   }
   const mem=cfg.memory?(cfg.memory[iso||'?']??={}):null;
   const tries=[...orderTries(addr,mem)];
@@ -39,7 +40,7 @@ export async function geocodeRow(r,m,cfg,geocode){
   let fallback=null;const failed=[];
   for(const t of tries){
     const g=await geocode(t.params,cfg);if(!g){failed.push(t.key);continue;}
-    const res={...g,prec:t.prec,iso,cpIn:cp,notes:t.note?notes.concat(t.note):notes};
+    const res={...g,prec:t.prec,iso,cpIn:cp,loose:!!t.loose,notes:t.note?notes.concat(t.note):notes};
     if(!isAddrKey(t.key))return fallback||res;                          // repli CP/ville : seulement si aucune adresse
     if(g.rank===0||g.rank>=26){                                         // rue ou bâtiment : on apprend quels essais marchent
       if(mem){(mem[t.key]??={win:0,loss:0}).win++;for(const k of failed)(mem[k]??={win:0,loss:0}).loss++;}
@@ -64,6 +65,10 @@ export function applyResult(r,g,cfg,nuts,names){
   if(cm===false){cpKo=true;notes.push(`CP trouvé ${g.postcode} ≠ CP saisi ${g.cpIn}`);}
   else if(cm==='near'){cpNear=true;notes.push(`CP voisin (trouvé ${g.postcode}, saisi ${g.cpIn})`);}
   else if(cm===null&&g.cpIn&&precise)notes.push('CP non renvoyé par le géocodeur');
+  // complément ignoré : doute sur le quartier, levé si le code postal saisi est retrouvé à l'identique
+  const cpSame=!!normCp(g.cpIn)&&normCp(g.cpIn)===normCp(g.postcode);
+  const loose=!!g.loose&&!cpSame;
+  if(loose)notes.push('complément ignoré : quartier non confirmé par le code postal, à vérifier');
   const n=findNuts(nuts,g.lon,g.lat,cfg.maxKm);
   if(!n){
     notes.push(cfg.maxKm?`aucune zone NUTS à moins de ${cfg.maxKm} km`:'point hors de toute zone NUTS');
@@ -74,7 +79,7 @@ export function applyResult(r,g,cfg,nuts,names){
   r.NUTS_version=n.v||'2024';r.distance_nuts_km=n.km;
   if(g.iso&&r.NUTS0!==nuts0Of(g.iso)&&!paysKo){paysKo=true;notes.push(`zone NUTS ${r.NUTS0} ≠ pays saisi ${g.iso}`);}
   if(!n.exact)notes.push(`point hors contour, zone la plus proche à ${n.km} km`);
-  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,cpNear,exact:n.exact}));
+  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,cpNear,loose,exact:n.exact}));
 }
 export function summarize(rows){
   const c={},f={},v=new Set();rows.forEach(r=>{const k=r.statut||'NON_TRAITE';c[k]=(c[k]||0)+1;if(r.confiance)f[r.confiance]=(f[r.confiance]||0)+1;if(r.NUTS_version)v.add(r.NUTS_version);});

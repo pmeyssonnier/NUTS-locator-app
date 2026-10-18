@@ -95,3 +95,13 @@ test('stripLocality : retire le complément après une virgule, sans perdre le n
   assert.equal(L.stripLocality('Rue X,'),'Rue X,');                                // rien après la virgule
   assert.equal(L.stripLocality(''),'');
 });
+
+test('decide : adresse trouvée sans le complément (loose) → A_VERIFIER, confiance MOYENNE au plus',()=>{
+  const D=q=>L.decide({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,cpNear:false,exact:true,...q});
+  assert.deepEqual(D({loose:true}),{statut:'A_VERIFIER',confiance:'MOYENNE',controle_manuel:'OUI'});    // même un bâtiment exact
+  assert.deepEqual(D({loose:true,niveau:'RUE'}),{statut:'A_VERIFIER',confiance:'MOYENNE',controle_manuel:'OUI'});
+  assert.equal(D({loose:true,paysKo:true}).statut,'PAYS_INCOHERENT');                                  // le pays prime
+  assert.equal(D({loose:true,precise:false}).confiance,'FAIBLE');                                      // un repli reste FAIBLE
+  assert.deepEqual(D({loose:false}),{statut:'OK',confiance:'HAUTE',controle_manuel:'NON'});            // comportement inchangé
+  assert.deepEqual(D({}),{statut:'OK',confiance:'HAUTE',controle_manuel:'NON'});
+});
