@@ -1,7 +1,11 @@
-'use strict';
-const test=require('node:test'),assert=require('node:assert/strict');
-const fs=require('node:fs'),path=require('node:path'),zlib=require('node:zlib');
-const L=require('./lib');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import {fileURLToPath} from 'node:url';
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
+import * as L from '../src/lib/index.js';
 
 const buf=u8=>u8.buffer.slice(u8.byteOffset,u8.byteOffset+u8.byteLength);
 
