@@ -362,6 +362,74 @@ function decide(q){
 // abréviations de type de voie retirées pour un second essai (ul., al., pl., os., str., tř., nám., bd.)
 const stripAbbr=s=>s.replace(/(^|[\s,])(ul|al|pl|os|str|tř|nám|bd|bld)\.\s*/giu,'$1').replace(/\s{2,}/g,' ').trim();
 
+// --- Géocodage d'une ligne et rattachement NUTS : fonctions pures, le géocodeur (geocode) et les contours (nuts, names) sont injectés ---
+const RES=['precision','niveau_resultat','lat','lon','adresse_geocodee','cp_trouve','pays_trouve','NUTS0','NUTS0_nom','NUTS1','NUTS1_nom','NUTS2','NUTS2_nom','NUTS3','NUTS3_nom','NUTS_version','distance_nuts_km','confiance','controle_manuel','controle','statut'];
+const val=(r,c)=>c?String(r[c]??'').trim():'';
+function cc(p){p=(p||'').trim();if(/^[A-Za-z]{2}$/.test(p)){p=p.toLowerCase();return {countrycodes:p==='el'?'gr':p==='uk'?'gb':p};}return p?{country:p}:{};}
+const NIV_TXT={RUE:'rue trouvée, pas le numéro',LOCALITE:'résultat au niveau quartier/localité',VILLE_OU_PLUS:'résultat au niveau ville ou plus large',CODE_POSTAL:'résultat au niveau code postal',INCONNU:'niveau du résultat non communiqué'};
+// cellule CSV : décimale française pour les nombres, formules neutralisées
+const csvCell=v=>{
+  if(typeof v==='number')return String(v).replace('.',',');            // décimale française (Excel FR)
+  v=String(v??'');
+  if(/^[=+\-@\t\r]/.test(v)&&!/^-?\d+([.,]\d+)?$/.test(v))v="'"+v;      // neutralise les formules
+  return /[;"\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+async function geocodeRow(r,m,cfg,geocode){
+  const pays=val(r,m.pays)||cfg.defPays,iso=isoOf(pays),fx=fixCp(val(r,m.cp),iso),cp=fx.cp;
+  const street=streetOf(val(r,m.adr),val(r,m.num),iso),city=val(r,m.ville);
+  const c=iso?{countrycodes:ccList(iso)}:cc(pays),tries=[],notes=fx.note?[fx.note]:[];
+  if(street)tries.push(['ADRESSE',{street,postalcode:cp,city,...c}]);
+  if(street)tries.push(['ADRESSE_LIBRE',{q:[street,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes}]);
+  const s2=street&&stripAbbr(street);
+  if(s2&&s2!==street){const nt=`trouvé sans l'abréviation (« ${s2} »)`;
+    tries.push(['ADRESSE',{street:s2,postalcode:cp,city,...c},nt]);
+    tries.push(['ADRESSE_LIBRE',{q:[s2,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes},nt]);}
+  if(cp)tries.push(['CODE_POSTAL',{postalcode:cp,...c}]);
+  if(city)tries.push(['VILLE',{city,...c}]);
+  // on garde le meilleur résultat : une adresse trop vague n'interrompt pas les essais suivants
+  let fallback=null;
+  for(const [prec,p,nt] of tries){
+    const g=await geocode(p,cfg);if(!g)continue;
+    const res={...g,prec,iso,cpIn:cp,notes:nt?notes.concat(nt):notes};
+    if(prec!=='ADRESSE'&&prec!=='ADRESSE_LIBRE')return fallback||res;   // repli CP/ville : seulement si aucune adresse
+    if(g.rank===0||g.rank>=26)return res;                               // rue ou bâtiment
+    fallback??=res;
+  }
+  return fallback||{fail:true,iso,notes};
+}
+function applyResult(r,g,cfg,nuts,names){
+  RES.forEach(c=>r[c]='');
+  const notes=[...(g.notes||[])];
+  const done=d=>{Object.assign(r,d);r.controle=notes.join(' ; ');};
+  if(g.fail){notes.push('aucun résultat de géocodage');return done({statut:'ECHEC_GEOCODAGE',confiance:'FAIBLE',controle_manuel:'OUI'});}
+  r.precision=g.prec;r.niveau_resultat=niveauOf(g.rank,g.atype);
+  r.lat=+g.lat.toFixed(6);r.lon=+g.lon.toFixed(6);r.adresse_geocodee=g.label;r.cp_trouve=g.postcode;r.pays_trouve=g.cc;
+  const precise=g.prec==='ADRESSE'||g.prec==='ADRESSE_LIBRE';
+  if(!precise)notes.push(g.prec==='VILLE'?'localisé au centre de la ville seulement':'localisé au centre du code postal seulement');
+  else if(r.niveau_resultat!=='BATIMENT')notes.push(NIV_TXT[r.niveau_resultat]);
+  let paysKo=false,cpKo=false,cpNear=false;
+  if(g.iso&&g.cc&&ccOf(g.cc)!==g.iso){paysKo=true;notes.push(`pays trouvé ${g.cc} ≠ pays saisi ${g.iso}`);}
+  const cm=cpMatch(g.iso,g.cpIn,g.postcode);
+  if(cm===false){cpKo=true;notes.push(`CP trouvé ${g.postcode} ≠ CP saisi ${g.cpIn}`);}
+  else if(cm==='near'){cpNear=true;notes.push(`CP voisin (trouvé ${g.postcode}, saisi ${g.cpIn})`);}
+  else if(cm===null&&g.cpIn&&precise)notes.push('CP non renvoyé par le géocodeur');
+  const n=findNuts(nuts,g.lon,g.lat,cfg.maxKm);
+  if(!n){
+    notes.push(cfg.maxKm?`aucune zone NUTS à moins de ${cfg.maxKm} km`:'point hors de toute zone NUTS');
+    if(g.iso==='GB'&&!cfg.uk)notes.push('Royaume-Uni : cochez « Inclure le Royaume-Uni (NUTS 2021) »');
+    return done({statut:paysKo?'PAYS_INCOHERENT':'HORS_NUTS',confiance:'FAIBLE',controle_manuel:'OUI'});
+  }
+  [['NUTS0',2],['NUTS1',3],['NUTS2',4],['NUTS3',5]].forEach(([k,l])=>{const code=n.id.slice(0,l);r[k]=code;r[k+'_nom']=(names||{})[code]||'';});
+  r.NUTS_version=n.v||'2024';r.distance_nuts_km=n.km;
+  if(g.iso&&r.NUTS0!==nuts0Of(g.iso)&&!paysKo){paysKo=true;notes.push(`zone NUTS ${r.NUTS0} ≠ pays saisi ${g.iso}`);}
+  if(!n.exact)notes.push(`point hors contour, zone la plus proche à ${n.km} km`);
+  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,cpNear,exact:n.exact}));
+}
+function summarize(rows){
+  const c={},f={},v=new Set();rows.forEach(r=>{const k=r.statut||'NON_TRAITE';c[k]=(c[k]||0)+1;if(r.confiance)f[r.confiance]=(f[r.confiance]||0)+1;if(r.NUTS_version)v.add(r.NUTS_version);});
+  const fmt=o=>Object.entries(o).map(([k,n])=>`${k}: ${n}`).join(' · ');
+  return fmt(c)+(Object.keys(f).length?`\nConfiance — ${fmt(f)}`:'')+(v.size>1?`\n⚠ Millésimes NUTS mixtes (${[...v].sort().join(' + ')}) : à signaler pour toute agrégation multi-pays.`:'');
+}
+
 // --- Exemple : 15 sociétés européennes (contacts fictifs) ---
 const SAMPLE=[
  ['Société','Nom','Prénom','Adresse','Code postal','Ville','Pays'],
@@ -394,13 +462,16 @@ const SAMPLE=[
  ['NatWest Group','MacLeod','Fiona','36 St Andrew Square','EH2 2YB','Edinburgh','UK']
 ];
 
+if(typeof module!=='undefined'&&module.exports)module.exports={xmlUnesc,xmlEsc,attrs,colIdx,colName,zipOpen,zipText,readXlsx,decodeText,parseCSV,crc32,zipBuild,buildXlsx,
+  inRing,prepNuts,distRingKm,findNuts,CP_LEN,COUNTRY_ALIASES,isoOf,nuts0Of,CC_GROUP,ccOf,ccList,NUM_FIRST,streetOf,normCp,fixCp,cpMatch,niveauOf,decide,stripAbbr,
+  RES,val,cc,csvCell,geocodeRow,applyResult,summarize,SAMPLE};   // utilisé par les tests Node (test/), sans effet dans le navigateur
+
 // ==== UI ====
 if(typeof document!=='undefined'){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const RES=['precision','niveau_resultat','lat','lon','adresse_geocodee','cp_trouve','pays_trouve','NUTS0','NUTS0_nom','NUTS1','NUTS1_nom','NUTS2','NUTS2_nom','NUTS3','NUTS3_nom','NUTS_version','distance_nuts_km','confiance','controle_manuel','controle','statut'];
 const S={headers:[],rows:[],hidden:new Set(),sortCol:null,sortDir:1,filter:'',running:false,nuts:null,nutsRes:null,names:null,last:0,levels:{},selRow:null};
 const GISCO='https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/';
 const FIELDS=[['adr','Adresse (rue)',/^(adresse|address|rue|street|straat|strasse|via|calle|indirizzo)/],
@@ -409,7 +480,6 @@ const FIELDS=[['adr','Adresse (rue)',/^(adresse|address|rue|street|straat|strass
  ['ville','Ville',/^(ville|city|localite|commune|gemeente|ort|stadt|citta|ciudad|town)/],
  ['pays','Pays',/^(pays|country|land|cntr|iso|nation)/]];
 const allCols=()=>[...S.headers,...RES];
-const val=(r,c)=>c?String(r[c]??'').trim():'';
 const getMap=()=>Object.fromEntries(FIELDS.map(([k])=>[k,$('#m_'+k).value]));
 function setStatus(t,err){const s=$('#status');s.textContent=t;s.className=err?'err':'';}
 function btns(){$('#run').disabled=S.running||!S.rows.length;$('#stop').disabled=!S.running;$('#exp').disabled=$('#expAno').disabled=$('#expCsv').disabled=$('#expGeo').disabled=!S.rows.length;
@@ -495,7 +565,6 @@ async function ensureLevel(){
   }catch(e){setStatus('Contours NUTS indisponibles : '+e.message,true);}
   draw();
 }
-function cc(p){p=(p||'').trim();if(/^[A-Za-z]{2}$/.test(p)){p=p.toLowerCase();return {countrycodes:p==='el'?'gr':p==='uk'?'gb':p};}return p?{country:p}:{};}
 const sleep2=(ms,sig)=>new Promise((res,rej)=>{const t=setTimeout(res,ms);sig?.addEventListener('abort',()=>{clearTimeout(t);rej(new DOMException('Arrêt','AbortError'));},{once:true});});
 async function nominatim(params,cfg){
   const u=new URL(cfg.nomUrl.replace(/\/+$/,'')+'/search');
@@ -517,63 +586,8 @@ async function nominatim(params,cfg){
   }
   throw new Error('Nominatim indisponible (trop de requêtes)');
 }
-async function geocodeRow(r,m,cfg){
-  const pays=val(r,m.pays)||cfg.defPays,iso=isoOf(pays),fx=fixCp(val(r,m.cp),iso),cp=fx.cp;
-  const street=streetOf(val(r,m.adr),val(r,m.num),iso),city=val(r,m.ville);
-  const c=iso?{countrycodes:ccList(iso)}:cc(pays),tries=[],notes=fx.note?[fx.note]:[];
-  if(street)tries.push(['ADRESSE',{street,postalcode:cp,city,...c}]);
-  if(street)tries.push(['ADRESSE_LIBRE',{q:[street,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes}]);
-  const s2=street&&stripAbbr(street);
-  if(s2&&s2!==street){const nt=`trouvé sans l'abréviation (« ${s2} »)`;
-    tries.push(['ADRESSE',{street:s2,postalcode:cp,city,...c},nt]);
-    tries.push(['ADRESSE_LIBRE',{q:[s2,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes},nt]);}
-  if(cp)tries.push(['CODE_POSTAL',{postalcode:cp,...c}]);
-  if(city)tries.push(['VILLE',{city,...c}]);
-  // on garde le meilleur résultat : une adresse trop vague n'interrompt pas les essais suivants
-  let fallback=null;
-  for(const [prec,p,nt] of tries){
-    const g=await nominatim(p,cfg);if(!g)continue;
-    const res={...g,prec,iso,cpIn:cp,notes:nt?notes.concat(nt):notes};
-    if(prec!=='ADRESSE'&&prec!=='ADRESSE_LIBRE')return fallback||res;   // repli CP/ville : seulement si aucune adresse
-    if(g.rank===0||g.rank>=26)return res;                               // rue ou bâtiment
-    fallback??=res;
-  }
-  return fallback||{fail:true,iso,notes};
-}
-const NIV_TXT={RUE:'rue trouvée, pas le numéro',LOCALITE:'résultat au niveau quartier/localité',VILLE_OU_PLUS:'résultat au niveau ville ou plus large',CODE_POSTAL:'résultat au niveau code postal',INCONNU:'niveau du résultat non communiqué'};
-function apply(r,g,cfg){
-  RES.forEach(c=>r[c]='');
-  const notes=[...(g.notes||[])];
-  const done=d=>{Object.assign(r,d);r.controle=notes.join(' ; ');};
-  if(g.fail){notes.push('aucun résultat de géocodage');return done({statut:'ECHEC_GEOCODAGE',confiance:'FAIBLE',controle_manuel:'OUI'});}
-  r.precision=g.prec;r.niveau_resultat=niveauOf(g.rank,g.atype);
-  r.lat=+g.lat.toFixed(6);r.lon=+g.lon.toFixed(6);r.adresse_geocodee=g.label;r.cp_trouve=g.postcode;r.pays_trouve=g.cc;
-  const precise=g.prec==='ADRESSE'||g.prec==='ADRESSE_LIBRE';
-  if(!precise)notes.push(g.prec==='VILLE'?'localisé au centre de la ville seulement':'localisé au centre du code postal seulement');
-  else if(r.niveau_resultat!=='BATIMENT')notes.push(NIV_TXT[r.niveau_resultat]);
-  let paysKo=false,cpKo=false,cpNear=false;
-  if(g.iso&&g.cc&&ccOf(g.cc)!==g.iso){paysKo=true;notes.push(`pays trouvé ${g.cc} ≠ pays saisi ${g.iso}`);}
-  const cm=cpMatch(g.iso,g.cpIn,g.postcode);
-  if(cm===false){cpKo=true;notes.push(`CP trouvé ${g.postcode} ≠ CP saisi ${g.cpIn}`);}
-  else if(cm==='near'){cpNear=true;notes.push(`CP voisin (trouvé ${g.postcode}, saisi ${g.cpIn})`);}
-  else if(cm===null&&g.cpIn&&precise)notes.push('CP non renvoyé par le géocodeur');
-  const n=findNuts(S.nuts,g.lon,g.lat,cfg.maxKm);
-  if(!n){
-    notes.push(cfg.maxKm?`aucune zone NUTS à moins de ${cfg.maxKm} km`:'point hors de toute zone NUTS');
-    if(g.iso==='GB'&&!cfg.uk)notes.push('Royaume-Uni : cochez « Inclure le Royaume-Uni (NUTS 2021) »');
-    return done({statut:paysKo?'PAYS_INCOHERENT':'HORS_NUTS',confiance:'FAIBLE',controle_manuel:'OUI'});
-  }
-  [['NUTS0',2],['NUTS1',3],['NUTS2',4],['NUTS3',5]].forEach(([k,l])=>{const code=n.id.slice(0,l);r[k]=code;r[k+'_nom']=S.names[code]||'';});
-  r.NUTS_version=n.v||'2024';r.distance_nuts_km=n.km;
-  if(g.iso&&r.NUTS0!==nuts0Of(g.iso)&&!paysKo){paysKo=true;notes.push(`zone NUTS ${r.NUTS0} ≠ pays saisi ${g.iso}`);}
-  if(!n.exact)notes.push(`point hors contour, zone la plus proche à ${n.km} km`);
-  done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,cpNear,exact:n.exact}));
-}
-function summary(){
-  const c={},f={},v=new Set();S.rows.forEach(r=>{const k=r.statut||'NON_TRAITE';c[k]=(c[k]||0)+1;if(r.confiance)f[r.confiance]=(f[r.confiance]||0)+1;if(r.NUTS_version)v.add(r.NUTS_version);});
-  const fmt=o=>Object.entries(o).map(([k,n])=>`${k}: ${n}`).join(' · ');
-  return fmt(c)+(Object.keys(f).length?`\nConfiance — ${fmt(f)}`:'')+(v.size>1?`\n⚠ Millésimes NUTS mixtes (${[...v].sort().join(' + ')}) : à signaler pour toute agrégation multi-pays.`:'');
-}
+const apply=(r,g,cfg)=>applyResult(r,g,cfg,S.nuts,S.names);
+const summary=()=>summarize(S.rows);
 let renderTimer=0;
 const renderSoon=()=>{if(renderTimer)return;renderTimer=setTimeout(()=>{renderTimer=0;render();},300);};
 async function run(){
@@ -586,7 +600,7 @@ async function run(){
   let i=0,bad=0,halt=false;const t0=Date.now();
   for(const r of todo){
     if(!S.running||S.rows!==rowsRef)break;i++;
-    try{const g=await geocodeRow(r,m,cfg);if(cfg.signal.aborted){i--;break;}apply(r,g,cfg);bad=0;}
+    try{const g=await geocodeRow(r,m,cfg,nominatim);if(cfg.signal.aborted){i--;break;}apply(r,g,cfg);bad=0;}
     catch(e){if(e.name==='AbortError'||cfg.signal.aborted){i--;break;}RES.forEach(c=>r[c]='');r.statut='ERREUR';r.confiance='FAIBLE';r.controle_manuel='OUI';r.controle=e.message;
       if(++bad>=5){halt=true;break;}}
     $('#bar').style.width=(100*i/todo.length)+'%';
@@ -654,11 +668,7 @@ $('#hideIn').onclick=()=>{S.headers.forEach(h=>S.hidden.add(h));buildCols();rend
 const stampNow=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 $('#expCsv').onclick=()=>{
   const {cols,rows}=view(),out=$('#expVisible').checked?cols:allCols();
-  const q=v=>{
-    if(typeof v==='number')return String(v).replace('.',',');            // décimale française (Excel FR)
-    v=String(v??'');
-    if(/^[=+\-@\t\r]/.test(v)&&!/^-?\d+([.,]\d+)?$/.test(v))v="'"+v;      // neutralise les formules
-    return /[;"\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const q=csvCell;
   const csv='\uFEFF'+[out.map(q).join(';'),...rows.map(r=>out.map(c=>q(r[c])).join(';'))].join('\r\n')+'\r\n';
   download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`nuts_resultat_${stampNow()}.csv`);
 };

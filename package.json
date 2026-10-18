@@ -1,0 +1,12 @@
+{
+  "name": "nuts-locator-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Application web autonome : géocodage d'adresses et rattachement aux codes NUTS Eurostat",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
