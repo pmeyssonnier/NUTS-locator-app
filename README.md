@@ -35,6 +35,17 @@ Un second exemple, [`exemples/exemple_multi_feuilles.xlsx`](exemples/exemple_mul
 
 La **confiance** (`HAUTE`, `MOYENNE`, `FAIBLE`) mesure la précision de la localisation. `HAUTE` exige un bâtiment trouvé, un code postal identique et un point dans le contour. La colonne `controle_manuel` vaut `OUI` dès que la confiance n'est pas `HAUTE`.
 
+## Utilisation sur téléphone et tablette
+
+L'interface s'adapte aux petits écrans (jusqu'à 720 px de large, par exemple un téléphone en portrait) :
+
+- **Liste de cartes** à la place du tableau à une trentaine de colonnes : une carte par ligne avec le nom, l'adresse, le statut (forme **et** couleur), le code NUTS 3 et sa confiance, la note de contrôle. « Toutes les données » déplie les autres colonnes visibles. Les cartes s'affichent par paquets de 60 (« Afficher plus »). Le filtre fonctionne comme sur le bureau, et une liste « Trier par » avec un bouton « Sens » remplace les en-têtes de colonnes.
+- **Barre de sections** fixée en bas de l'écran : Données, Géocodage, Résultats, Carte (la section visible est mise en évidence).
+- **Carte tactile** : un doigt pour déplacer, deux doigts pour zoomer (pincement fluide, le point entre les doigts reste en place), toucher un point pour afficher sa fiche, puis « Voir dans la liste » pour retrouver sa ligne. « Voir sur la carte » sur une carte fait l'inverse. Les cibles tactiles font au moins 44 px, et la zone de toucher d'un point est élargie.
+- **Plein écran** pour la carte (bouton ⛶ sur la carte, ou « Carte en plein écran » sous la liste) ; `Échap` ou ✕ pour en sortir.
+- **Légende** repliée par défaut sur petit écran, pour ne pas masquer la carte.
+- Champs en 16 px (pas de zoom automatique sur iPhone), formulaires sur une ou deux colonnes, aucun défilement horizontal de la page. En paysage (plus de 720 px), le tableau revient.
+
 ## Accessibilité clavier
 
 - **Accès rapide** : au premier `Tab`, des liens permettent de sauter aux résultats ou à la carte.
@@ -69,7 +80,7 @@ npm test
 
 Les tests tournent aussi automatiquement sur GitHub (Actions, Node 20 et 22) à chaque push sur `main` et à chaque pull request : voir `.github/workflows/test.yml`.
 
-Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/markers.test.js` (formes et couleurs des points), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé).
+Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/markers.test.js` (formes et couleurs des points), `test/mobile.test.js` (zoom au pincement, tuiles, pagination des cartes), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé).
 
 ## Sources et licences
 
