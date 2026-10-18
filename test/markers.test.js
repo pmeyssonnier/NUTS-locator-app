@@ -1,6 +1,6 @@
-'use strict';
-const test=require('node:test'),assert=require('node:assert/strict');
-const L=require('./lib');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as L from '../src/lib/index.js';
 
 test('markerStyle : une forme et une couleur par statut',()=>{
   assert.deepEqual([L.markerStyle('OK').shape,L.markerStyle('OK').color],['circle','#12805c']);

@@ -1,6 +1,6 @@
-'use strict';
-const test=require('node:test'),assert=require('node:assert/strict');
-const L=require('./lib');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as L from '../src/lib/index.js';
 
 const K=(key,o={})=>({key,shiftKey:false,ctrlKey:false,altKey:false,metaKey:false,...o});
 

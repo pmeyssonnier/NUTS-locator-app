@@ -1,6 +1,6 @@
-'use strict';
-const test=require('node:test'),assert=require('node:assert/strict');
-const L=require('./lib');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as L from '../src/lib/index.js';
 
 test('tileScale : zoom entier → tuiles de 256 px',()=>{
   assert.deepEqual(L.tileScale(12),{zt:12,ts:256});assert.deepEqual(L.tileScale(4),{zt:4,ts:256});

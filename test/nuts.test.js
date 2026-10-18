@@ -1,6 +1,6 @@
-'use strict';
-const test=require('node:test'),assert=require('node:assert/strict');
-const L=require('./lib');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as L from '../src/lib/index.js';
 
 const sq=(lon,lat,d)=>[[lon-d,lat-d],[lon+d,lat-d],[lon+d,lat+d],[lon-d,lat+d],[lon-d,lat-d]];
 const feat=(id,type,coordinates)=>({type:'Feature',properties:{NUTS_ID:id,NAME_LATN:id},geometry:{type,coordinates}});

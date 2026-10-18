@@ -1,6 +1,6 @@
 # NUTS Locator
 
-Application web autonome (un seul fichier, `index.html`, sans dépendance ni installation) qui :
+Application web (JavaScript natif, sans dépendance ni étape de compilation) qui :
 
 1. importe un fichier Excel (`.xlsx`) ou CSV contenant des adresses ;
 2. géocode chaque adresse avec Nominatim (OpenStreetMap) ;
@@ -10,7 +10,10 @@ Application web autonome (un seul fichier, `index.html`, sans dépendance ni ins
 
 ## Utilisation
 
-Ouvrez `index.html` dans un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+), ou servez-le en HTTPS (par exemple GitHub Pages).
+Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le code est découpé en modules ES : la page doit être **servie en HTTP(S)**, elle ne fonctionne pas ouverte directement depuis un fichier (`file://`, un bandeau l'indique).
+
+- **En ligne** : la version publiée sur GitHub Pages (fichiers statiques, rien à configurer).
+- **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez http://localhost:8000. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
 
 1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ».
 2. **Colonnes & géocodage** : vérifiez le mappage (Adresse, Numéro, Code postal, Ville, Pays), renseignez votre e-mail (politique Nominatim), puis cliquez sur « Géocoder ».
@@ -66,9 +69,36 @@ L'interface s'adapte aux petits écrans (jusqu'à 720 px de large, par exemple u
 - Le géocodage s'arrête après 5 erreurs consécutives (réseau ou serveur indisponible).
 - Si GISCO est bloqué par un pare-feu, importez les fichiers `NUTS_RG_…_4326_LEVL_n.geojson` avec « Importer des contours ».
 
+## Structure du code
+
+```
+index.html          balisage de la page
+css/style.css       styles (bureau, mobile, mode sombre)
+src/main.js         point d'entrée : branche les modules entre eux
+src/lib/            logique pure, sans DOM ni réseau (importable par Node)
+  xml.js zip.js xlsx.js    lecture et écriture des classeurs .xlsx (feuilles multiples, fusion)
+  csv.js                   lecture CSV, cellule d'export CSV
+  geo.js                   point dans polygone, distance, rattachement NUTS
+  postal.js                pays, codes postaux, ordre numéro/rue, règle de statut
+  geocode.js               stratégie de géocodage d'une ligne, rattachement NUTS, synthèse
+  markers.js keys.js mapmath.js util.js sample.js   marqueurs, touches, zoom, outils, exemple
+  index.js                 point d'entrée unique de la logique pure
+src/ui/             interface (DOM)
+  dom.js state.js storage.js     utilitaires, état partagé, IndexedDB et préférences
+  nuts.js nominatim.js           contours GISCO, appels Nominatim (cache, limite de débit)
+  rows.js table.js map.js        fiche d'une ligne, tableau et cartes, carte canvas
+  render.js select.js            rendu d'ensemble, sélection d'une ligne
+  files.js run.js cache.js results.js exports.js session.js layout.js controls.js   fonctions de l'application
+  selftests.js                   auto-tests du navigateur (#tests)
+test/               tests Node (node:test)
+scripts/serve.mjs   serveur statique local (npm start)
+```
+
+Règles de dépendance : `src/lib/` n'importe jamais `src/ui/`, et il n'y a aucun import circulaire. Les modules qui dessinent (`table.js`, `map.js`) ne connaissent pas l'orchestration : `main.js` leur passe leurs actions (sélection, tri, effacement) à l'initialisation (`initMap`, `initTable`). Pour ajouter une règle de géocodage ou de statut, il suffit de modifier `src/lib/` et ses tests.
+
 ## Tests
 
-**Dans le navigateur** : ajoutez `#tests` à l'URL (`index.html#tests`) pour lancer des auto-tests rapides.
+**Dans le navigateur** : ajoutez `#tests` à l'URL (`http://localhost:8000/#tests`) pour lancer des auto-tests rapides.
 
 **En ligne de commande** (Node 20+, aucune dépendance à installer) :
 
@@ -76,7 +106,7 @@ L'interface s'adapte aux petits écrans (jusqu'à 720 px de large, par exemple u
 npm test
 ```
 
-`index.html` reste un fichier autonome. Sa section `LIB` (lecture et écriture XLSX, CSV, point dans polygone, codes postaux, pays, règle de statut, `geocodeRow`, `applyResult`, `summarize`, `csvCell`) ne dépend ni du DOM ni du réseau : le géocodeur, les contours NUTS et les libellés y sont passés en paramètres. `test/lib.js` charge cette section directement depuis `index.html`, donc les tests exécutent le code réellement livré. La section `UI` (tableau, carte, IndexedDB, Nominatim) n'est pas couverte par les tests Node.
+Les tests Node importent directement `src/lib/` : ils exécutent le code réellement livré. La partie `src/ui/` (tableau, carte, IndexedDB, appels réseau) n'est pas couverte par les tests Node.
 
 Les tests tournent aussi automatiquement sur GitHub (Actions, Node 20 et 22) à chaque push sur `main` et à chaque pull request : voir `.github/workflows/test.yml`.
 

@@ -1,6 +1,6 @@
-'use strict';
-const test=require('node:test'),assert=require('node:assert/strict');
-const L=require('./lib');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as L from '../src/lib/index.js';
 
 test('isoOf : codes ISO, alias NUTS et noms de pays',()=>{
   assert.equal(L.isoOf('BE'),'BE');assert.equal(L.isoOf(' be '),'BE');
