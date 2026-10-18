@@ -1,29 +1,49 @@
 import {findNuts} from './geo.js';
-import {cc, ccList, ccOf, cpMatch, decide, fixCp, isoOf, niveauOf, nuts0Of, streetOf, stripAbbr} from './postal.js';
+import {cc, ccList, ccOf, cpMatch, decide, fixCp, isoOf, niveauOf, nuts0Of, streetOf, stripAbbr, stripLocality} from './postal.js';
 
 // --- Géocodage d'une ligne et rattachement NUTS : fonctions pures, le géocodeur (geocode) et les contours (nuts, names) sont injectés ---
 export const RES=['precision','niveau_resultat','lat','lon','adresse_geocodee','cp_trouve','pays_trouve','NUTS0','NUTS0_nom','NUTS1','NUTS1_nom','NUTS2','NUTS2_nom','NUTS3','NUTS3_nom','NUTS_version','distance_nuts_km','confiance','controle_manuel','controle','statut'];
 export const val=(r,c)=>c?String(r[c]??'').trim():'';
 export const NIV_TXT={RUE:'rue trouvée, pas le numéro',LOCALITE:'résultat au niveau quartier/localité',VILLE_OU_PLUS:'résultat au niveau ville ou plus large',CODE_POSTAL:'résultat au niveau code postal',INCONNU:'niveau du résultat non communiqué'};
+// Variantes de la rue, de la plus fidèle à la plus simplifiée ; chacune est essayée en recherche structurée puis libre
+const VARIANT_NOTES={
+  abbr:s=>`trouvé sans l'abréviation (« ${s} »)`,
+  comp:s=>`trouvé sans le complément d'adresse (« ${s} »)`,
+  'abbr+comp':s=>`trouvé sans l'abréviation ni le complément (« ${s} »)`};
+const isAddrKey=k=>k.startsWith('ADRESSE');
+// Ordre appris : un essai qui n'a jamais réussi pour ce pays après 2 échecs passe en dernier recours (il reste tenté s'il le faut)
+export function orderTries(tries,mem){
+  const bad=t=>{const k=mem?.[t.key];return !!k&&k.win===0&&k.loss>=2;};
+  return [...tries.filter(t=>!bad(t)),...tries.filter(bad)];
+}
+// cfg.memory (facultatif) : {[pays]: {[essai]: {win,loss}}}, alimenté au fil des lignes ; sans lui, l'ordre est toujours le même
 export async function geocodeRow(r,m,cfg,geocode){
   const pays=val(r,m.pays)||cfg.defPays,iso=isoOf(pays),fx=fixCp(val(r,m.cp),iso),cp=fx.cp;
-  const street=streetOf(val(r,m.adr),val(r,m.num),iso),city=val(r,m.ville);
-  const c=iso?{countrycodes:ccList(iso)}:cc(pays),tries=[],notes=fx.note?[fx.note]:[];
-  if(street)tries.push(['ADRESSE',{street,postalcode:cp,city,...c}]);
-  if(street)tries.push(['ADRESSE_LIBRE',{q:[street,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes}]);
-  const s2=street&&stripAbbr(street);
-  if(s2&&s2!==street){const nt=`trouvé sans l'abréviation (« ${s2} »)`;
-    tries.push(['ADRESSE',{street:s2,postalcode:cp,city,...c},nt]);
-    tries.push(['ADRESSE_LIBRE',{q:[s2,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes},nt]);}
-  if(cp)tries.push(['CODE_POSTAL',{postalcode:cp,...c}]);
-  if(city)tries.push(['VILLE',{city,...c}]);
+  const adr=val(r,m.adr),num=val(r,m.num),city=val(r,m.ville);
+  const c=iso?{countrycodes:ccList(iso)}:cc(pays),notes=fx.note?[fx.note]:[];
+  const free=s=>({q:[s,[cp,city].filter(Boolean).join(' '),c.country].filter(Boolean).join(', '),countrycodes:c.countrycodes});
+  // le complément est retiré de la rue avant d'y ajouter le numéro (sinon « Abbey Road, Whitley 7 » perdrait son numéro)
+  const base=streetOf(adr,num,iso),short=streetOf(stripLocality(adr),num,iso);
+  const addr=[],seen=new Set();
+  for(const [id,s] of [['raw',base],['abbr',stripAbbr(base)],['comp',short],['abbr+comp',stripAbbr(short)]]){
+    if(!s||seen.has(s))continue;seen.add(s);
+    const note=VARIANT_NOTES[id]?VARIANT_NOTES[id](s):'';
+    addr.push({key:'ADRESSE:'+id,prec:'ADRESSE',params:{street:s,postalcode:cp,city,...c},note},
+              {key:'ADRESSE_LIBRE:'+id,prec:'ADRESSE_LIBRE',params:free(s),note});
+  }
+  const mem=cfg.memory?(cfg.memory[iso||'?']??={}):null;
+  const tries=[...orderTries(addr,mem)];
+  if(cp)tries.push({key:'CODE_POSTAL',prec:'CODE_POSTAL',params:{postalcode:cp,...c},note:''});
+  if(city)tries.push({key:'VILLE',prec:'VILLE',params:{city,...c},note:''});
   // on garde le meilleur résultat : une adresse trop vague n'interrompt pas les essais suivants
-  let fallback=null;
-  for(const [prec,p,nt] of tries){
-    const g=await geocode(p,cfg);if(!g)continue;
-    const res={...g,prec,iso,cpIn:cp,notes:nt?notes.concat(nt):notes};
-    if(prec!=='ADRESSE'&&prec!=='ADRESSE_LIBRE')return fallback||res;   // repli CP/ville : seulement si aucune adresse
-    if(g.rank===0||g.rank>=26)return res;                               // rue ou bâtiment
+  let fallback=null;const failed=[];
+  for(const t of tries){
+    const g=await geocode(t.params,cfg);if(!g){failed.push(t.key);continue;}
+    const res={...g,prec:t.prec,iso,cpIn:cp,notes:t.note?notes.concat(t.note):notes};
+    if(!isAddrKey(t.key))return fallback||res;                          // repli CP/ville : seulement si aucune adresse
+    if(g.rank===0||g.rank>=26){                                         // rue ou bâtiment : on apprend quels essais marchent
+      if(mem){(mem[t.key]??={win:0,loss:0}).win++;for(const k of failed)(mem[k]??={win:0,loss:0}).loss++;}
+      return res;}
     fallback??=res;
   }
   return fallback||{fail:true,iso,notes};

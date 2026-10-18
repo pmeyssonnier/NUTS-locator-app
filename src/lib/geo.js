@@ -1,10 +1,12 @@
 // --- NUTS : point dans polygone ---
 export function inRing(x,y,r){let ins=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const xi=r[i][0],yi=r[i][1],xj=r[j][0],yj=r[j][1];
   if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)ins=!ins;}return ins;}
+// libellé Eurostat nettoyé : espaces de début/fin et doubles espaces retirés, espace autour des « / » supprimé
+export const cleanName=s=>String(s??'').replace(/\s+/g,' ').replace(/\s*\/\s*/g,'/').trim();
 export function prepNuts(features){
   return features.filter(f=>f.geometry).map(f=>{const g=f.geometry,polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;const b=[180,90,-180,-90];
     for(const p of polys)for(const [x,y] of p[0]){if(x<b[0])b[0]=x;if(y<b[1])b[1]=y;if(x>b[2])b[2]=x;if(y>b[3])b[3]=y;}
-    return {id:f.properties.NUTS_ID,name:f.properties.NAME_LATN,polys,b};});
+    return {id:f.properties.NUTS_ID,name:cleanName(f.properties.NAME_LATN),polys,b};});
 }
 // distance (km) d'un point à un anneau, projection équirectangulaire locale
 export function distRingKm(lon,lat,ring){

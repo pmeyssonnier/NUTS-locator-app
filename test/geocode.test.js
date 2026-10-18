@@ -177,3 +177,83 @@ test('SAMPLE : lignes complètes et pays reconnus',()=>{
   assert.equal(head.length,7);
   for(const r of rest){assert.equal(r.length,7,r[0]);assert.notEqual(L.isoOf(r[6]),'',r[0]);}
 });
+
+// ---------- Complément d'adresse et ordre appris ----------
+const NOT_FOUND=async()=>null;
+test('geocodeRow : complément après une virgule → essai avec la rue seule',async()=>{
+  const g=fake(null,null,hit({rank:30,cc:'GB',postcode:'CV3 4LF'}));
+  const r=await L.geocodeRow(row({Adresse:'Abbey Road, Whitley',Num:'',Pays:'UK',CP:'CV3 4LF',Ville:'Coventry'}),M,CFG,g);
+  assert.equal(g.calls.length,3);
+  assert.equal(g.calls[0].street,'Abbey Road, Whitley');assert.equal(g.calls[1].q.startsWith('Abbey Road, Whitley'),true);
+  assert.equal(g.calls[2].street,'Abbey Road');assert.equal(r.prec,'ADRESSE');
+  assert.match(r.notes.join(' '),/sans le complément d'adresse \(« Abbey Road »\)/);
+});
+
+test('geocodeRow : variantes dédoublonnées (pas de second essai identique) et ordre abréviation puis complément',async()=>{
+  const g=fake();   // tout échoue : on observe la liste des essais
+  await L.geocodeRow(row({Adresse:'ul. Chemików, Płock',Num:'7',Pays:'PL',CP:'09411',Ville:'Płock'}),M,CFG,g);
+  const streets=g.calls.slice(0,8).map(c=>c.street??c.q.replace(/, 09411 Płock$/,''));
+  assert.deepEqual(streets,['ul. Chemików, Płock 7','ul. Chemików, Płock 7','Chemików, Płock 7','Chemików, Płock 7','ul. Chemików 7','ul. Chemików 7','Chemików 7','Chemików 7']);
+  assert.equal(g.calls.length,8+2);                       // + code postal + ville
+});
+
+test('orderTries : un essai sans aucun succès après 2 échecs passe en dernier recours',()=>{
+  const t=k=>({key:k});
+  const list=[t('A'),t('B'),t('C')];
+  assert.deepEqual(L.orderTries(list,null).map(x=>x.key),['A','B','C']);
+  assert.deepEqual(L.orderTries(list,{}).map(x=>x.key),['A','B','C']);
+  assert.deepEqual(L.orderTries(list,{A:{win:0,loss:1}}).map(x=>x.key),['A','B','C']);              // un seul échec : pas de conclusion
+  assert.deepEqual(L.orderTries(list,{A:{win:0,loss:2}}).map(x=>x.key),['B','C','A']);
+  assert.deepEqual(L.orderTries(list,{A:{win:1,loss:5}}).map(x=>x.key),['A','B','C']);              // il a déjà réussi : on le garde
+  assert.deepEqual(L.orderTries(list,{A:{win:0,loss:3},B:{win:0,loss:2}}).map(x=>x.key),['C','A','B']);   // ordre relatif conservé
+});
+
+test('ordre appris : la recherche structurée qui échoue toujours pour un pays est tentée en dernier',async()=>{
+  const mem={},cfg={...CFG,memory:mem};
+  const onlyFree=()=>fake_(async p=>p.q?hit():null);
+  const rows=[row({Pays:'NL',CP:'1096BC'}),row({Pays:'NL',CP:'1096BC'}),row({Pays:'NL',CP:'1096BC'}),row({Pays:'NL',CP:'1096BC'})];
+  const counts=[];
+  for(const r of rows){const g=onlyFree();await L.geocodeRow(r,M,cfg,g);counts.push(g.calls.length);}
+  assert.deepEqual(counts,[2,2,1,1]);                       // 2 requêtes tant qu'on n'a pas 2 échecs, puis 1 seule
+  assert.deepEqual(mem.NL['ADRESSE:raw'],{win:0,loss:2});assert.deepEqual(mem.NL['ADRESSE_LIBRE:raw'],{win:4,loss:0});
+});
+
+test('ordre appris : cas polonais, l\'essai sans abréviation passe en premier',async()=>{
+  const cfg={...CFG,memory:{}};const counts=[];
+  for(let i=0;i<4;i++){
+    const g=fake_(async p=>p.q&&p.q.startsWith('Chemików 7')?hit():null);
+    const r=await L.geocodeRow(row({Adresse:'ul. Chemików',Num:'7',Pays:'PL',CP:'09411'}),M,cfg,g);
+    counts.push(g.calls.length);assert.equal(r.prec,'ADRESSE_LIBRE');
+  }
+  assert.deepEqual(counts,[4,4,1,1]);
+});
+
+test('ordre appris : un essai relégué redevient prioritaire s\'il réussit à nouveau',async()=>{
+  const cfg={...CFG,memory:{}};
+  const run=async fn=>{const g=fake_(fn);await L.geocodeRow(row({Pays:'NL'}),M,cfg,g);return g.calls.map(c=>c.q?'libre':'structurée').join('>');};
+  const onlyFree=async p=>p.q?hit():null;
+  assert.equal(await run(onlyFree),'structurée>libre');assert.equal(await run(onlyFree),'structurée>libre');
+  assert.equal(await run(onlyFree),'libre');                                  // structurée reléguée
+  assert.equal(await run(async p=>p.street?hit():null),'libre>structurée');   // la libre échoue : la structurée est reprise et réussit
+  assert.equal(await run(onlyFree),'structurée>libre');                       // structurée a réussi : retour à l'ordre normal
+});
+
+test('ordre appris : mémoire séparée par pays, aucun effet sans mémoire',async()=>{
+  const cfg={...CFG,memory:{}};
+  for(let i=0;i<3;i++)await L.geocodeRow(row({Pays:'NL'}),M,cfg,fake_(async p=>p.q?hit():null));
+  const g=fake(hit());await L.geocodeRow(row({Pays:'BE'}),M,cfg,g);
+  assert.equal(g.calls.length,1);assert.ok(g.calls[0].street,'BE commence toujours par la recherche structurée');
+  const calls=[];
+  for(let i=0;i<4;i++){const g2=fake_(async p=>p.q?hit():null);await L.geocodeRow(row({Pays:'NL'}),M,CFG,g2);calls.push(g2.calls.length);}
+  assert.deepEqual(calls,[2,2,2,2]);                                           // sans cfg.memory : toujours le même ordre
+});
+
+test('ordre appris : un résultat vague ou un échec total n\'apprend rien',async()=>{
+  const cfg={...CFG,memory:{}};
+  await L.geocodeRow(row({Pays:'FR'}),M,cfg,fake_(async()=>hit({rank:16,atype:'city'})));
+  await L.geocodeRow(row({Pays:'FR'}),M,cfg,NOT_FOUND);
+  assert.deepEqual(cfg.memory.FR,{});
+});
+
+// géocodeur simulé à comportement libre, avec journal des requêtes
+function fake_(fn){const calls=[];const g=async p=>{calls.push(p);return fn(p);};g.calls=calls;return g;}

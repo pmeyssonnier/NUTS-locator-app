@@ -63,5 +63,12 @@ export function decide(q){
   return {statut,confiance,controle_manuel:confiance==='HAUTE'?'NON':'OUI'};
 }
 // abréviations de type de voie retirées pour un second essai (ul., al., pl., os., str., tř., nám., bd.)
+// complément d'adresse après une virgule (« Abbey Road, Whitley ») : on ne garde que la rue, à condition qu'elle contienne des lettres
+// (pas « 12, rue X ») et que ce qui suit ne commence pas par un chiffre (pas « Rue X, 12 », le numéro serait perdu)
+export const stripLocality=s=>{
+  const i=s.indexOf(',');if(i<0)return s;
+  const a=s.slice(0,i).trim(),rest=s.slice(i+1).trim();
+  return /\p{L}/u.test(a)&&rest&&!/^\d/.test(rest)?a:s;
+};
 export const stripAbbr=s=>s.replace(/(^|[\s,])(ul|al|pl|os|str|tř|nám|bd|bld)\.\s*/giu,'$1').replace(/\s{2,}/g,' ').trim();
 export function cc(p){p=(p||'').trim();if(/^[A-Za-z]{2}$/.test(p)){p=p.toLowerCase();return {countrycodes:p==='el'?'gr':p==='uk'?'gb':p};}return p?{country:p}:{};}
