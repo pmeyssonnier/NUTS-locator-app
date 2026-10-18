@@ -54,6 +54,8 @@ npm test
 
 `index.html` reste un fichier autonome. Sa section `LIB` (lecture et écriture XLSX, CSV, point dans polygone, codes postaux, pays, règle de statut, `geocodeRow`, `applyResult`, `summarize`, `csvCell`) ne dépend ni du DOM ni du réseau : le géocodeur, les contours NUTS et les libellés y sont passés en paramètres. `test/lib.js` charge cette section directement depuis `index.html`, donc les tests exécutent le code réellement livré. La section `UI` (tableau, carte, IndexedDB, Nominatim) n'est pas couverte par les tests Node.
 
+Les tests tournent aussi automatiquement sur GitHub (Actions, Node 20 et 22) à chaque push sur `main` et à chaque pull request : voir `.github/workflows/test.yml`.
+
 Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé).
 
 ## Sources et licences
