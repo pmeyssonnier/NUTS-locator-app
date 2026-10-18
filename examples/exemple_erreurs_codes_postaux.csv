@@ -1,0 +1,8 @@
+﻿Société;Adresse;Code postal;Ville;Pays;Cas testé
+Commission européenne;Rue de la Loi 200;1049;Bruxelles;BE;Référence : adresse et code postal cohérents
+Cas CP faux;Rue de la Loi 200;9000;Bruxelles;BE;Code postal erroné (9000 = Gand) pour une adresse bruxelloise
+Total (La Défense);2 Place Jean Millier;31700;Courbevoie;FR;Code postal de Toulouse pour une adresse des Hauts-de-Seine
+Tour Total;2 Place Jean Millier;92064;Paris La Défense Cedex;FR;Code CEDEX : absent des tables
+Amsterdam 4 chiffres;Amstelplein 2;1096;Amsterdam;NL;Code postal néerlandais sans les 2 lettres
+Siemens;Werner-von-Siemens-Straße 1;80333;München;DE;Référence allemande cohérente
+BP Londres;1 St James's Square;SW1Y 4PD;London;UK;Royaume-Uni : pas de table, note SANS_TABLE

@@ -95,6 +95,9 @@ export function applyResult(r,g,cfg,nuts,names,postal){
     else if(acc==='NON'||acc==='MEME_NUTS2'){cpNutsKo=true;notes.push(`NUTS 3 du point (${r.NUTS3}) ≠ NUTS 3 du code postal (${cand.join('|')})${acc==='MEME_NUTS2'?', même NUTS 2':''} : à vérifier`);}
     else if(acc==='VERSION_DIFFERENTE')notes.push(`NUTS 3 du point (${r.NUTS3}, NUTS ${r.NUTS_version}) ≠ code postal (${cand.join('|')}, NUTS ${table.nutsVersion||'?'}) : millésimes différents, non concluant`);
     else notes.push('code postal absent de la table Eurostat');
+  }else if(postal&&Object.keys(postal).length&&g.iso){
+    // des tables sont chargées mais pas pour ce pays : le contrôle n'a pas eu lieu, ce que l'export doit montrer
+    r.controle_cp_nuts='SANS_TABLE';notes.push(`aucune table Eurostat importée pour ${g.iso} : contrôle par le code postal impossible`+(g.iso==='GB'?' (le Royaume-Uni n\'est pas dans les tables NUTS 2024)':''));
   }
   done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,loose,cpNutsKo,exact:n.exact}));
 }

@@ -6,17 +6,27 @@ import {render} from './render.js';
 import {reapplyPostal} from './run.js';
 import {refreshStorage} from './storeinfo.js';
 import {S, summary} from './state.js';
-import {dbGet, dbPut} from './storage.js';
+import {dbGet, dbPut, prefGet, prefSet} from './storage.js';
 
 // Tables « code postal → NUTS 3 » d'Eurostat (Tercet) : PROTOTYPE de contrôle croisé.
 // Importées par l'utilisateur (.zip tel que téléchargé, ou .csv), conservées dans IndexedDB comme les contours.
 const INDEX='pcnuts_index';
 
+const LIST_MAX=3;      // au-delà, la liste des pays se replie derrière un résumé (le fichier tous pays en compte 34)
 function show(){
-  const t=Object.values(S.postal);
-  $('#pcStatus').textContent=t.length
-    ?'Tables chargées : '+t.map(x=>`${x.iso} (NUTS ${x.nutsVersion||'millésime inconnu'}, ${x.count.toLocaleString('fr-BE')} codes postaux${x.multi?`, ${x.multi} à plusieurs NUTS 3`:''})`).join(' · ')
-    :'Aucune table : le NUTS 3 n\'est déterminé que par la position du point.';
+  const t=Object.values(S.postal),box=$('#pcStatus');
+  const line=x=>`${x.iso} (NUTS ${x.nutsVersion||'millésime inconnu'}, ${x.count.toLocaleString('fr-BE')} codes postaux${x.multi?`, ${x.multi} à plusieurs NUTS 3`:''})`;
+  box.replaceChildren();
+  if(!t.length)box.textContent='Aucune table : le NUTS 3 n\'est déterminé que par la position du point.';
+  else if(t.length<=LIST_MAX)box.textContent='Tables chargées : '+t.map(line).join(' · ');
+  else{
+    const d=document.createElement('details'),s=document.createElement('summary'),l=document.createElement('div');
+    s.textContent=`Tables chargées : ${t.length} pays, ${t.reduce((n,x)=>n+x.count,0).toLocaleString('fr-BE')} codes postaux (cliquer pour ${prefGet('pcOpen')==='1'?'masquer':'afficher'} le détail)`;
+    l.textContent=t.map(line).join(' · ');l.style.marginTop='6px';
+    d.append(s,l);d.open=prefGet('pcOpen')==='1';
+    d.addEventListener('toggle',()=>{prefSet('pcOpen',d.open?'1':'0');s.textContent=s.textContent.replace(/pour (masquer|afficher)/,'pour '+(d.open?'masquer':'afficher'));});
+    box.append(d);
+  }
   $('#pcClear').hidden=!t.length;
 }
 // fichiers texte à analyser : le .csv, ou les .csv/.txt d'une archive .zip
@@ -60,9 +70,14 @@ export function initPostcodes(){
     const m=await refresh();if(m)setStatus('Tables code postal → NUTS retirées.\n'+m);
   };
   // tables conservées d'une session précédente
-  dbGet('geo',INDEX).then(async idx=>{
+  const ready=dbGet('geo',INDEX).then(async idx=>{
     for(const iso of idx||[]){const t=await dbGet('geo','pcnuts_'+iso);if(t&&t.entries)S.postal[iso]=t;}
     show();
+  });
+  // session restaurée : ses lignes ont pu être calculées sans les tables (ou avec d'autres) ; on les recalcule avec celles qui sont chargées
+  document.addEventListener('nuts:restored',async()=>{
+    await ready;if(!Object.keys(S.postal).length)return;
+    const m=await refresh();if(m)setStatus('Session restaurée.\n'+m);
   });
   show();refreshStorage();
 }

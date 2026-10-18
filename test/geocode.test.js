@@ -363,6 +363,15 @@ test('contrôle croisé : désaccord à millésime identique → A_VERIFIER / MO
   assert.equal(r.NUTS3,'BE100');assert.equal(r.NUTS3_codepostal,'BE242');           // les deux valeurs restent visibles
 });
 
+test('contrôle croisé : tables chargées mais pas pour ce pays → SANS_TABLE, note, statut inchangé',()=>{
+  const r=applyP(G(),{FR:{...tbl({'75001':'FR101'}),iso:'FR'}});
+  assert.equal(r.controle_cp_nuts,'SANS_TABLE');assert.equal(r.NUTS3_codepostal,'');assert.equal(r.statut,'OK');assert.equal(r.confiance,'HAUTE');
+  assert.match(r.controle,/aucune table Eurostat importée pour BE : contrôle par le code postal impossible/);
+  const gb=applyP(G({iso:'GB',cc:'GB',lat:51.5,lon:-0.14,cpIn:'SW1Y4PD',postcode:'SW1Y 4PD'}),{BE:tbl({'1000':'BE100'})});
+  assert.equal(gb.controle_cp_nuts,'SANS_TABLE');
+  const aucune=applyP(G(),{});assert.equal(aucune.controle_cp_nuts,'');assert.doesNotMatch(aucune.controle,/Eurostat/);   // aucune table du tout : rien à signaler
+});
+
 test('contrôle croisé : point proche de la zone du code postal (≤ 10 km) → limitrophe, note seulement',()=>{
   const feat=(id,lon)=>({type:'Feature',properties:{NUTS_ID:id,NAME_LATN:id},geometry:{type:'Polygon',coordinates:[sq(lon,50.85,.1)]}});
   const N2=L.prepNuts([feat('BE100',4.35),feat('BE242',4.55),feat('BE211',5.5)]);           // BE242 à ~7 km du point, BE211 à ~60 km
@@ -393,7 +402,7 @@ test('contrôle croisé : code postal absent de la table → note, statut inchan
 
 test('contrôle croisé : table d\'un autre pays ignorée ; le pays prime toujours',()=>{
   const autre=applyP(G(),{NL:{...tbl({'1000':['NL329']}),iso:'NL'}});
-  assert.equal(autre.controle_cp_nuts,'');assert.equal(autre.statut,'OK');
+  assert.equal(autre.controle_cp_nuts,'SANS_TABLE');assert.equal(autre.NUTS3_codepostal,'');assert.equal(autre.statut,'OK');   // la table NL ne sert pas pour une adresse BE
   const pays=applyP(G({cc:'NL'}),{BE:tbl({'1000':['BE242']})});
   assert.equal(pays.statut,'PAYS_INCOHERENT');
 });

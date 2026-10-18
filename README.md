@@ -40,9 +40,9 @@ En option, l'application compare le NUTS 3 trouvé par la **position du point** 
 - un fichier par pays (`pc2025_FR_NUTS-2024_v1.0.zip`) ;
 - le fichier **tous pays** (`PCODE_2025_NUTS-2024_v2.0.zip`, 830 033 codes postaux, 34 pays) : il est réparti par pays d'après le préfixe du code NUTS (UK → GB, EL → GR). Compter 3 à 5 secondes d'analyse ; les tables sont ensuite rechargées en moins d'une seconde.
 
-Les tables sont conservées dans le navigateur (« Retirer les tables » les efface) et lues localement : elles ne sont jamais envoyées nulle part. Sans table, rien ne change.
+Quand plus de trois pays sont chargés, la liste se replie derrière un résumé cliquable (« Tables chargées : 34 pays, 830 033 codes postaux ») ; son état ouvert ou fermé est mémorisé. Les tables sont conservées dans le navigateur (« Retirer les tables » les efface) et lues localement : elles ne sont jamais envoyées nulle part. Sans table, rien ne change.
 
-**Appliquer les tables après coup** : importer ou retirer des tables recalcule aussitôt les lignes déjà géocodées, sans nouvel appel à Nominatim (le résultat brut du géocodeur est gardé avec chaque ligne, y compris dans la session sauvegardée). Les lignes d'une session sauvegardée avant cette fonction n'ont pas ce résultat : le message l'indique, et il faut alors relancer « Géocoder » (en décochant « Seulement les lignes non OK »).
+**Appliquer les tables après coup** : importer ou retirer des tables recalcule aussitôt les lignes déjà géocodées, sans nouvel appel à Nominatim (le résultat brut du géocodeur est gardé avec chaque ligne, y compris dans la session sauvegardée). Restaurer une session recalcule de la même façon ses lignes avec les tables chargées. Les lignes d'une session sauvegardée avant cette fonction n'ont pas ce résultat : le message l'indique, et il faut alors relancer « Géocoder » (en décochant « Seulement les lignes non OK »).
 
 **Conservation des imports** : contours et tables sont gardés dans le navigateur (IndexedDB) et ne s'importent qu'une fois. Une ligne sous les imports indique l'état du stockage : « durable », « non garanti » (le navigateur peut tout effacer : fenêtre privée, nettoyage automatique des données de site, disque presque plein) ou « indisponible » (tout reste en mémoire et est perdu à la fermeture de l'onglet). Les contours importés sont aussi concernés.
 
@@ -56,6 +56,7 @@ Les tables sont conservées dans le navigateur (« Retirer les tables » les eff
 | `MEME_NUTS2` | comme `NON`, avec un NUTS 3 de la même région NUTS 2 | `A_VERIFIER`, confiance `MOYENNE` au plus |
 | `VERSION_DIFFERENTE` | désaccord, mais millésimes NUTS différents (ou inconnu) : non concluant | aucun (note) |
 | `CP_ABSENT` | code postal absent de la table | aucun (note) |
+| `SANS_TABLE` | des tables sont chargées mais pas pour ce pays (le Royaume-Uni par exemple) : pas de contrôle | aucun (note) |
 
 Le millésime de la table (NUTS 2021, 2024…) est lu dans le nom du fichier (`…_NUTS-2024_…`) et comparé à celui des contours (2024, ou 2021 pour le Royaume-Uni). Ne renommez pas le fichier : sans millésime, un désaccord reste non concluant.
 
@@ -65,6 +66,8 @@ Le millésime de la table (NUTS 2021, 2024…) est lu dans le nom du fichier (`�
 - la précision de la table dépend du pays (finesse du code postal) : le contrôle est surtout utile quand le code postal est détaillé.
 
 **Formats par pays** (fichier tous pays, vérifiés) : code à 4 chiffres (AT, BE, CH, DK, HU, LU, NO, SI…), 5 chiffres (DE, ES, FR, IT, GR…), `NNN NN` (CZ, SK, SE), `NN-NNN` (PL), `NNNN-NNN` (PT), `NNNN AA` (NL, 464 890 codes), `LV-NNNN` (LV), clés de routage à 3 caractères pour l'Irlande (`D02`) et Malte (`MTP`). Les espaces et tirets sont ignorés à la comparaison ; une adresse néerlandaise ou portugaise qui n'a que les 4 premiers chiffres est comparée aux NUTS 3 des codes qui commencent par eux ; un Eircode complet est ramené à sa clé de routage. Le Royaume-Uni n'est pas dans les tables 2024.
+
+**Fichier d'essai** : `examples/exemple_erreurs_codes_postaux.csv` contient quelques cas pour voir le contrôle à l'œuvre : un code postal erroné, un code postal d'une autre ville, un code CEDEX, un code néerlandais à 4 chiffres et une adresse britannique. Importez-le avec les tables Eurostat (dernière colonne : cas testé). Résultats attendus, à vérifier à l'usage car ils dépendent des réponses de Nominatim : les deux lignes à code postal erroné devraient finir `A_VERIFIER` (CP trouvé ≠ CP saisi, et `controle_cp_nuts` = `NON`) ; le CEDEX `CP_ABSENT` ; les adresses de référence et la ligne néerlandaise `OUI` ; l'adresse britannique `SANS_TABLE`.
 
 **Mode sans géocodage** : cochez « Sans géocodage : NUTS 3 déduit du code postal » (le bouton devient « Déterminer le NUTS »). Aucun appel à Nominatim ni aux contours : le NUTS 0 à 3 et les libellés viennent du seul code postal et de la table Eurostat du pays (seuls les libellés sont téléchargés, une fois). C'est instantané et sans position, donc sans carte ni GeoJSON.
 
