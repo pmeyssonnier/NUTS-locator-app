@@ -28,7 +28,7 @@ export function initExports(){
   };
   $('#expAno').onclick=()=>{
     const {cols}=view(),out=$('#expVisible').checked?cols:allCols();
-    const ano=S.rows.filter(r=>r.statut&&(r.statut!=='OK'||r.confiance!=='HAUTE'));
+    const ano=S.rows.filter(r=>r.statut&&r.controle_manuel==='OUI');
     if(!ano.length){setStatus('Aucune ligne à contrôler.');return;}
     exportRows(ano,out,'A_controler','nuts_a_controler');setStatus(`${ano.length} ligne(s) à contrôler exportée(s) (filtre ignoré).`);
   };

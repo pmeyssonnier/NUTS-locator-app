@@ -10,7 +10,7 @@ let H={};   // actions fournies par l'orchestration : activate(r,how), sort(col)
 // Petit écran : une carte par ligne (résumé + « Toutes les données ») à la place du tableau à 30 colonnes
 function cardHtml(r){
   const m=getMap(),adr=[val(r,m.adr),val(r,m.num)].filter(Boolean).join(' '),loc=[val(r,m.cp),val(r,m.ville),val(r,m.pays)].filter(Boolean).join(' ');
-  const st=r.statut?`<span class="rc-st st-${esc(r.statut)}">${markerSvg(markerStyle(r.statut),12,4)}${esc(r.statut)}</span>`:'<span class="rc-st muted">non traité</span>';
+  const st=r.statut?`<span class="rc-st st-${esc(r.statut)}">${r.statut==='CP_SEUL'?'':markerSvg(markerStyle(r.statut),12,4)}${esc(r.statut)}</span>`:'<span class="rc-st muted">non traité</span>';
   const nuts=r.NUTS3?`${esc(r.NUTS3)} — ${esc(r.NUTS3_nom)}${r.confiance?` · confiance <span class="cf-${esc(r.confiance)}">${esc(r.confiance)}</span>`:''}`:'';
   const cols=allCols().filter(c=>!S.hidden.has(c)&&r[c]!==''&&r[c]!=null);
   const sel=r===S.selRow;

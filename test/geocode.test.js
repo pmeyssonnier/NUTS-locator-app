@@ -407,3 +407,47 @@ test('contrôle croisé : un code postal à plusieurs NUTS 3 est confirmé si l\
   const r=applyP(G(),{BE:tbl({'1000':['BE242','BE100']})});
   assert.equal(r.controle_cp_nuts,'OUI');assert.equal(r.NUTS3_codepostal,'BE242|BE100');
 });
+
+// --- mode sans géocodage : NUTS 3 déduit du code postal seul ---
+const rp=(row,postal,cfg={defPays:'BE'},names=NAMES)=>{const r={...row};L.resolveByPostcode(r,M,cfg,names,postal);return r;};
+const tb=(iso,entries,len=4,nutsVersion='2024')=>({iso,nutsVersion,source:'t',entries,len,count:Object.keys(entries).length,multi:0,skipped:0});
+
+test('sans géocodage : un NUTS 3 → CP_SEUL, tous les niveaux et libellés, aucune position',()=>{
+  const r=rp(row(),{BE:tb('BE',{'1000':'BE100'})});
+  assert.equal(r.statut,'CP_SEUL');assert.equal(r.confiance,'MOYENNE');assert.equal(r.controle_manuel,'NON');
+  assert.deepEqual([r.NUTS0,r.NUTS1,r.NUTS2,r.NUTS3],['BE','BE1','BE10','BE100']);
+  assert.equal(r.NUTS3_nom,'Arr. de Bruxelles');assert.equal(r.NUTS_version,'2024');
+  assert.equal(r.precision,'CODE_POSTAL_TABLE');assert.equal(r.controle_cp_nuts,'TABLE_SEULE');assert.equal(r.lat,'');
+  assert.match(r.controle,/déduit du code postal seul/);
+});
+
+test('sans géocodage : plusieurs NUTS 3 → A_VERIFIER, seuls les niveaux communs sont renseignés',()=>{
+  const r=rp(row(),{BE:tb('BE',{'1000':'BE211,BE212'})});
+  assert.equal(r.statut,'A_VERIFIER');assert.equal(r.confiance,'FAIBLE');assert.equal(r.controle_manuel,'OUI');
+  assert.deepEqual([r.NUTS0,r.NUTS1,r.NUTS2,r.NUTS3],['BE','BE2','BE21','']);assert.equal(r.NUTS3_codepostal,'BE211|BE212');
+  const x=rp(row(),{BE:tb('BE',{'1000':'BE211,BE242'})});assert.deepEqual([x.NUTS1,x.NUTS2,x.NUTS3],['BE2','','']);
+});
+
+test('sans géocodage : échecs explicites (code manquant, pays inconnu, pas de table, code absent) → ECHEC_CP',()=>{
+  const P={BE:tb('BE',{'1000':'BE100'})};
+  assert.match(rp(row({CP:''}),P).controle,/code postal manquant/);
+  assert.match(rp(row({Pays:'Atlantide'}),P).controle,/pays non reconnu/);
+  assert.match(rp(row({Pays:'FR',CP:'75001'}),P).controle,/aucune table Eurostat importée pour FR/);
+  assert.match(rp(row({Pays:'GB',CP:'SW1A 1AA'}),P).controle,/Royaume-Uni n'est pas dans les tables/);
+  const abs=rp(row({CP:'9999'}),P);
+  assert.equal(abs.statut,'ECHEC_CP');assert.equal(abs.confiance,'FAIBLE');assert.equal(abs.controle_manuel,'OUI');assert.match(abs.controle,/absent de la table/);
+  assert.equal(abs.NUTS3,'');
+});
+
+test('sans géocodage : pays par défaut, code postal complété (fixCp) et repli sur les 4 chiffres (NL)',()=>{
+  const nl=L.parsePostcodeTables("NUTS3;CODE\n'NL366';'3204 XD'\n").find(t=>t.iso==='NL');
+  const r=rp(row({Pays:'',CP:'3204 ZZ'}),{NL:nl},{defPays:'NL'});
+  assert.equal(r.statut,'CP_SEUL');assert.equal(r.NUTS3,'NL366');assert.match(r.controle,/4 premiers chiffres/);
+  const fr=rp(row({Pays:'FR',CP:'1000'}),{FR:tb('FR',{'01000':'FRK21'},5)});
+  assert.equal(fr.NUTS3,'FRK21');assert.match(fr.controle,/complété/);
+});
+
+test('sans géocodage : les colonnes de résultat précédentes sont effacées',()=>{
+  const r=row({lat:50.8,NUTS3:'XX999',statut:'OK'});L.resolveByPostcode(r,M,{defPays:'BE'},NAMES,{BE:tb('BE',{'1000':'BE100'})});
+  assert.equal(r.lat,'');assert.equal(r.NUTS3,'BE100');
+});

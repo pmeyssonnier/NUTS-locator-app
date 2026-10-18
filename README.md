@@ -62,6 +62,16 @@ Le millésime de la table (NUTS 2021, 2024…) est lu dans le nom du fichier (`�
 
 **Formats par pays** (fichier tous pays, vérifiés) : code à 4 chiffres (AT, BE, CH, DK, HU, LU, NO, SI…), 5 chiffres (DE, ES, FR, IT, GR…), `NNN NN` (CZ, SK, SE), `NN-NNN` (PL), `NNNN-NNN` (PT), `NNNN AA` (NL, 464 890 codes), `LV-NNNN` (LV), clés de routage à 3 caractères pour l'Irlande (`D02`) et Malte (`MTP`). Les espaces et tirets sont ignorés à la comparaison ; une adresse néerlandaise ou portugaise qui n'a que les 4 premiers chiffres est comparée aux NUTS 3 des codes qui commencent par eux ; un Eircode complet est ramené à sa clé de routage. Le Royaume-Uni n'est pas dans les tables 2024.
 
+**Mode sans géocodage** : cochez « Sans géocodage : NUTS 3 déduit du code postal » (le bouton devient « Déterminer le NUTS »). Aucun appel à Nominatim ni aux contours : le NUTS 0 à 3 et les libellés viennent du seul code postal et de la table Eurostat du pays (seuls les libellés sont téléchargés, une fois). C'est instantané et sans position, donc sans carte ni GeoJSON.
+
+| Statut | Cas | Confiance | À contrôler |
+|---|---|---|---|
+| `CP_SEUL` | un seul NUTS 3 pour ce code postal | `MOYENNE` | non |
+| `A_VERIFIER` | plusieurs NUTS 3 possibles : seuls les niveaux communs sont remplis | `FAIBLE` | oui |
+| `ECHEC_CP` | code postal manquant, pays inconnu, pas de table pour ce pays (dont le Royaume-Uni) ou code absent de la table | `FAIBLE` | oui |
+
+Moins précis que le géocodage : le NUTS 3 est celui du centroïde du code postal et peut être faux près d'une limite de NUTS 3. Il convient pour des listes dont les codes postaux sont fiables et fins (NL, PT, DE, FR…) ; les codes non géographiques (CEDEX, boîtes postales) échouent. `controle_cp_nuts` vaut `TABLE_SEULE` et `precision` `CODE_POSTAL_TABLE`.
+
 **Concordance par pays selon Eurostat** (notes méthodologiques, tableau 2 : contrôle sur un échantillon de codes postaux de chaque pays, comparé à trois sources indépendantes — Azure Maps, Bing Maps et les districts postaux TomTom) :
 
 | Pays | Échantillon | Azure Maps | Bing Maps | TomTom |
