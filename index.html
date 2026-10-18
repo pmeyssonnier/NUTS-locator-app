@@ -55,10 +55,19 @@ tbody tr.sel td{background:rgba(31,94,255,.14)}
 .cf-HAUTE{color:var(--ok)}.cf-MOYENNE{color:var(--warn)}.cf-FAIBLE{color:var(--err)}
 .notice{margin:8px 0 0;font-size:12px;color:var(--mute)}
 .muted{color:var(--mute);font-size:12px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+th:focus-visible,tbody tr:focus-visible,#map:focus-visible{outline-offset:-2px}
+tbody tr{scroll-margin-top:34px}
+tbody tr.sel td:first-child{box-shadow:inset 4px 0 0 var(--acc)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:8px;top:-80px;z-index:10;padding:8px 12px;border-radius:6px;background:var(--acc);color:#fff;font-size:13px;text-decoration:none}
+.skip:focus{top:8px}
 footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
 </style>
 </head>
 <body>
+<a class="skip" href="#sec-results">Aller aux résultats</a>
+<a class="skip" href="#sec-map">Aller à la carte</a>
 <header>
   <h1>NUTS Locator</h1>
   <p>Import Excel/CSV → géocodage des adresses (OpenStreetMap) → codes NUTS 0/1/2/3 Eurostat (NUTS 2024 ; Royaume-Uni en NUTS 2021) → carte → export Excel.</p>
@@ -108,8 +117,8 @@ footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
     <p class="notice">Confidentialité : seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi ; noms, prénoms et autres colonnes restent dans votre navigateur. Les réponses du géocodeur et les contours NUTS sont gardés en cache dans ce navigateur (IndexedDB ; bouton « Vider le cache » pour le géocodage) ; la dernière session (données importées et résultats, hors e-mail) y est aussi conservée pour pouvoir être restaurée (bouton « Oublier la session » pour l'effacer) ; le fond de carte charge des tuiles depuis le serveur choisi. Le serveur public Nominatim est limité à 1 requête/s et n'est pas prévu pour du géocodage massif.</p>
   </section>
 
-  <section class="card">
-    <h2>3. Résultats</h2>
+  <section class="card" id="sec-results" tabindex="-1" aria-labelledby="h-results">
+    <h2 id="h-results">3. Résultats</h2>
     <div class="row">
       <label>Filtrer<input type="text" id="filter" placeholder="texte…"></label>
       <label class="inline"><input type="checkbox" id="expVisible" checked> Exporter seulement les colonnes visibles</label>
@@ -125,10 +134,11 @@ footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
       <button id="showAll">Tout afficher</button>
       <button id="hideIn">Masquer les colonnes d'entrée</button>
     </details>
-    <div class="tablewrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <p class="notice" id="tblHelp">Clavier : Tab pour entrer dans le tableau, flèches haut/bas, Début/Fin et Page haut/bas pour changer de ligne, Entrée pour afficher la ligne sur la carte ; Entrée sur un en-tête pour trier.</p>
+    <div class="tablewrap"><table aria-label="Résultats du géocodage" aria-describedby="tblHelp"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
-  <section class="card">
-    <h2>4. Carte</h2>
+  <section class="card" id="sec-map" tabindex="-1" aria-labelledby="h-map">
+    <h2 id="h-map">4. Carte</h2>
     <div class="row">
       <label>Fond de carte<select id="base"><option value="osm" selected>OpenStreetMap</option><option value="voyager">CARTO Voyager (clé gratuite)</option><option value="custom">URL personnalisée</option><option value="none">Aucun</option></select></label>
       <label id="lblKey" hidden>Clé CARTO<input type="text" id="cartoKey" placeholder="clé reçue par e-mail" autocomplete="off"></label>
@@ -140,14 +150,16 @@ footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
       <button id="png">Exporter la carte (PNG)</button>
     </div>
     <div id="mapwrap">
-      <canvas id="map"></canvas>
-      <div class="mapbtns"><button id="zin" title="Zoom +">+</button><button id="zout" title="Zoom −">−</button></div>
+      <canvas id="map" tabindex="0" role="application" aria-label="Carte des adresses géocodées" aria-describedby="mapHelp"></canvas>
+      <div class="mapbtns"><button id="zin" title="Zoom +" aria-label="Zoom avant">+</button><button id="zout" title="Zoom −" aria-label="Zoom arrière">−</button></div>
       <div id="legend"><i style="background:#12805c"></i>OK (confiance haute ou moyenne)<br><i style="background:#ca8a04"></i>À vérifier (CP/ville, CP différent)<br><i style="background:#d97706"></i>NUTS proche<br><i style="background:#c0262d"></i>Pays incohérent / hors NUTS / échec<br><span class="muted">Cliquez un point ou une zone</span></div>
       <div id="pop" hidden></div>
       <div class="attrib" id="attrib"></div>
     </div>
+    <p class="notice" id="mapHelp">Clavier (carte active) : flèches pour déplacer (Maj : plus loin) · + et − pour zoomer · 0 ou Début pour tout afficher · Page suivante / précédente pour passer au point suivant / précédent · Échap pour fermer l'info.</p>
   </section>
 </main>
+<div id="live" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
 <footer>Géocodage © contributeurs OpenStreetMap (Nominatim, max 1 requête/s). Limites administratives © EuroGeographics — Eurostat GISCO, NUTS 2024.</footer>
 
 <script>
@@ -462,7 +474,36 @@ const SAMPLE=[
  ['NatWest Group','MacLeod','Fiona','36 St Andrew Square','EH2 2YB','Edinburgh','UK']
 ];
 
-if(typeof module!=='undefined'&&module.exports)module.exports={xmlUnesc,xmlEsc,attrs,colIdx,colName,zipOpen,zipText,readXlsx,decodeText,parseCSV,crc32,zipBuild,buildXlsx,
+// --- Clavier : actions de la carte et navigation dans une liste (pures, testées sous Node) ---
+// e = événement clavier (key, shiftKey, ctrlKey, altKey, metaKey) → action ou null si la touche n'est pas gérée
+function mapKeyAction(e){
+  if(e.ctrlKey||e.metaKey||e.altKey)return null;
+  const d=e.shiftKey?240:80;                                   // pas de déplacement en pixels
+  switch(e.key){
+    case 'ArrowLeft':return {pan:[-d,0]};case 'ArrowRight':return {pan:[d,0]};
+    case 'ArrowUp':return {pan:[0,-d]};case 'ArrowDown':return {pan:[0,d]};
+    case '+':case '=':return {zoom:1};case '-':case '_':return {zoom:-1};
+    case '0':case 'Home':return {fit:true};
+    case 'PageDown':return {step:1};case 'PageUp':return {step:-1};
+    case 'Escape':return {close:true};
+    default:return null;}
+}
+// nouvel index de ligne selon la touche (sans rebouclage), null si la touche n'est pas gérée ou la liste vide
+function moveIndex(key,cur,n){
+  if(!(n>0))return null;const last=n-1,c=Math.max(0,Math.min(last,cur));
+  switch(key){
+    case 'ArrowDown':return Math.min(last,c+1);case 'ArrowUp':return Math.max(0,c-1);
+    case 'PageDown':return Math.min(last,c+10);case 'PageUp':return Math.max(0,c-10);
+    case 'Home':return 0;case 'End':return last;
+    default:return null;}
+}
+// point suivant (dir=1) ou précédent (dir=-1) avec rebouclage ; cur<0 = aucun sélectionné ; -1 si la liste est vide
+function stepIndex(cur,n,dir){
+  if(!(n>0))return -1;
+  if(cur<0)return dir>0?0:n-1;
+  return (cur+dir+n)%n;
+}
+if(typeof module!=='undefined'&&module.exports)module.exports={mapKeyAction,moveIndex,stepIndex,xmlUnesc,xmlEsc,attrs,colIdx,colName,zipOpen,zipText,readXlsx,decodeText,parseCSV,crc32,zipBuild,buildXlsx,
   inRing,prepNuts,distRingKm,findNuts,CP_LEN,COUNTRY_ALIASES,isoOf,nuts0Of,CC_GROUP,ccOf,ccList,NUM_FIRST,streetOf,normCp,fixCp,cpMatch,niveauOf,decide,stripAbbr,
   RES,val,cc,csvCell,geocodeRow,applyResult,summarize,SAMPLE};   // utilisé par les tests Node (test/), sans effet dans le navigateur
 
@@ -481,7 +522,9 @@ const FIELDS=[['adr','Adresse (rue)',/^(adresse|address|rue|street|straat|strass
  ['pays','Pays',/^(pays|country|land|cntr|iso|nation)/]];
 const allCols=()=>[...S.headers,...RES];
 const getMap=()=>Object.fromEntries(FIELDS.map(([k])=>[k,$('#m_'+k).value]));
-function setStatus(t,err){const s=$('#status');s.textContent=t;s.className=err?'err':'';}
+// annonce vocale (lecteurs d'écran) ; vidé puis rempli pour que le même texte soit relu
+function announce(t){const l=$('#live');l.textContent='';setTimeout(()=>{l.textContent=t;},50);}
+function setStatus(t,err){const s=$('#status');s.textContent=t;s.className=err?'err':'';if(err)announce(String(t).split('\n')[0]);}
 function btns(){$('#run').disabled=S.running||!S.rows.length;$('#stop').disabled=!S.running;$('#exp').disabled=$('#expAno').disabled=$('#expCsv').disabled=$('#expGeo').disabled=!S.rows.length;
   for(const id of ['#file','#sample','#withUK','#res','#maxKm','#defPays','#nomUrl','#email','#onlyMissing','#clearCache','#geoFiles','#restore','#forget'])$(id).disabled=S.running;$('#mapBox').querySelectorAll('select').forEach(x=>x.disabled=S.running);}
 
@@ -589,7 +632,8 @@ async function nominatim(params,cfg){
 const apply=(r,g,cfg)=>applyResult(r,g,cfg,S.nuts,S.names);
 const summary=()=>summarize(S.rows);
 let renderTimer=0;
-const renderSoon=()=>{if(renderTimer)return;renderTimer=setTimeout(()=>{renderTimer=0;render();},300);};
+// pendant le géocodage, pas de reconstruction du tableau tant que le focus y est (sinon la ligne est relue en boucle) ; rendu final à la fin
+const renderSoon=()=>{if(renderTimer)return;renderTimer=setTimeout(()=>{renderTimer=0;if(!document.activeElement?.closest?.('#tbody,#thead'))render();},300);};
 async function run(){
   const m=getMap();if(!m.adr&&!m.cp&&!m.ville){setStatus('Indiquez au moins la colonne Adresse, Code postal ou Ville.',true);return;}
   const cfg={nomUrl:$('#nomUrl').value,email:$('#email').value.trim(),defPays:$('#defPays').value,maxKm:Math.max(0,+$('#maxKm').value||0),uk:ukOn()};
@@ -608,7 +652,9 @@ async function run(){
     setStatus(`${i}/${todo.length} — reste ~${eta}s\n${summary()}`);renderSoon();
     if(i%50===0)saveSession();
   }
-  S.running=false;btns();await saveSession();setStatus((halt?'Interrompu après 5 erreurs consécutives (réseau ou serveur indisponible). ':i<todo.length?'Arrêté. ':'Terminé. ')+summary(),halt);
+  S.running=false;btns();await saveSession();
+  const msg=(halt?'Interrompu après 5 erreurs consécutives (réseau ou serveur indisponible). ':i<todo.length?'Arrêté. ':'Terminé. ')+summary();
+  setStatus(msg,halt);announce(msg.replace(/\n/g,'. '));
   render();await ensureLevel();fit();
 }
 
@@ -622,9 +668,16 @@ function view(){
 }
 function render(){
   const {cols,rows}=view();
-  $('#thead').innerHTML='<tr>'+cols.map(c=>`<th data-col="${esc(c)}">${esc(c)}${S.sortCol===c?`<span class="arr">${S.sortDir>0?'▲':'▼'}</span>`:''}</th>`).join('')+'</tr>';
-  $('#tbody').innerHTML=rows.map(r=>`<tr data-i="${r.__i}"${r===S.selRow?' class="sel"':''}>`+cols.map(c=>`<td${c==='statut'?` class="st-${esc(r[c])}"`:c==='confiance'?` class="cf-${esc(r[c])}"`:''}>${esc(r[c])}</td>`).join('')+'</tr>').join('');
+  // le tableau est reconstruit : on mémorise l'élément qui a le focus pour le lui rendre ensuite
+  const ae=document.activeElement,fTh=ae?.closest?.('#thead th'),fTr=ae?.closest?.('#tbody tr');
+  const keepTh=fTh?fTh.dataset.col:null,keepTr=fTr?fTr.dataset.i:null;
+  const tabRow=rows.includes(S.selRow)?S.selRow:rows[0];                 // une seule ligne dans l'ordre de tabulation
+  $('#thead').innerHTML='<tr>'+cols.map(c=>`<th data-col="${esc(c)}" tabindex="0" aria-sort="${S.sortCol===c?(S.sortDir>0?'ascending':'descending'):'none'}">${esc(c)}${S.sortCol===c?`<span class="arr" aria-hidden="true">${S.sortDir>0?'▲':'▼'}</span>`:''}</th>`).join('')+'</tr>';
+  $('#tbody').innerHTML=rows.map(r=>`<tr data-i="${r.__i}" tabindex="${r===tabRow?0:-1}"${r===S.selRow?' class="sel" aria-current="true"':''}>`+cols.map(c=>`<td${c==='statut'?` class="st-${esc(r[c])}"`:c==='confiance'?` class="cf-${esc(r[c])}"`:''}>${esc(r[c])}</td>`).join('')+'</tr>').join('');
   $('#count').textContent=`${rows.length} / ${S.rows.length} lignes`;
+  S.tabTr=$('#tbody').querySelector('tr[tabindex="0"]');
+  if(keepTh!==null)[...$('#thead').querySelectorAll('th')].find(t=>t.dataset.col===keepTh)?.focus();
+  else if(keepTr!==null)$('#tbody').querySelector(`tr[data-i="${keepTr}"]`)?.focus({preventScroll:true});
   draw();
 }
 function buildCols(){
@@ -660,8 +713,12 @@ $('#geoFiles').addEventListener('change',async e=>{
   setStatus(`Contours importés : ${ok.length}${ok.length?' — '+ok.join(', '):''}${ko.length?'\nRefusés : '+ko.join(' ; '):''}`,ko.length>0);
 });
 $('#filter').oninput=e=>{S.filter=e.target.value;render();};
-$('#thead').onclick=e=>{const th=e.target.closest('th');if(!th)return;const c=th.dataset.col;
-  if(S.sortCol===c){if(S.sortDir>0)S.sortDir=-1;else S.sortCol=null;}else{S.sortCol=c;S.sortDir=1;}render();};
+function sortBy(c){
+  if(S.sortCol===c){if(S.sortDir>0)S.sortDir=-1;else S.sortCol=null;}else{S.sortCol=c;S.sortDir=1;}
+  render();announce(S.sortCol?`Trié par ${c}, ${S.sortDir>0?'croissant':'décroissant'}`:'Tri supprimé');
+}
+$('#thead').onclick=e=>{const th=e.target.closest('th');if(th)sortBy(th.dataset.col);};
+$('#thead').addEventListener('keydown',e=>{const th=e.target.closest('th');if(!th||(e.key!=='Enter'&&e.key!==' '))return;e.preventDefault();sortBy(th.dataset.col);});
 $('#colsBox').onchange=e=>{const c=e.target.value;e.target.checked?S.hidden.delete(c):S.hidden.add(c);render();};
 $('#showAll').onclick=()=>{S.hidden.clear();buildCols();render();};
 $('#hideIn').onclick=()=>{S.headers.forEach(h=>S.hidden.add(h));buildCols();render();};
@@ -770,8 +827,15 @@ function positionPop(){
   p.style.left=Math.max(6,Math.min(MAP.W-p.offsetWidth-6,x+12))+'px';
   const top=y-p.offsetHeight-12;p.style.top=(top>6?top:Math.min(MAP.H-p.offsetHeight-6,y+12))+'px';
 }
+function rowTitle(r){const m=getMap();return S.headers.filter(h=>![m.adr,m.num,m.cp,m.ville,m.pays].includes(h)).slice(0,3).map(h=>r[h]).filter(Boolean).join(' · ');}
+// texte brut d'une ligne pour l'annonce vocale
+function rowText(r){
+  const m=getMap();
+  return [rowTitle(r)||'Ligne '+(r.__i+1),[val(r,m.adr),val(r,m.num)].filter(Boolean).join(' '),[val(r,m.cp),val(r,m.ville),val(r,m.pays)].filter(Boolean).join(' '),
+    r.NUTS3?`NUTS 3 ${r.NUTS3} ${r.NUTS3_nom}`.trim():'',r.statut?`statut ${r.statut}`:'',r.confiance?`confiance ${r.confiance}`:''].filter(Boolean).join(', ');
+}
 function rowHtml(r){
-  const m=getMap(),title=S.headers.filter(h=>![m.adr,m.num,m.cp,m.ville,m.pays].includes(h)).slice(0,3).map(h=>r[h]).filter(Boolean).join(' · ');
+  const m=getMap(),title=rowTitle(r);
   const L=(k)=>r[k]?`${esc(r[k])} — ${esc(r[k+'_nom'])}<br>`:'';
   return `<b>${esc(title||'Ligne '+(r.__i+1))}</b>${esc([val(r,m.adr),val(r,m.num)].filter(Boolean).join(' '))}<br>${esc([val(r,m.cp),val(r,m.ville),val(r,m.pays)].filter(Boolean).join(' '))}<br>`+
     `<span class="muted">${L('NUTS3')}${L('NUTS2')}${L('NUTS1')}${r.NUTS_version?'NUTS '+esc(r.NUTS_version)+'<br>':''}</span><span class="st-${esc(r.statut)}">${esc(r.statut)}</span> · ${esc(r.precision)} · confiance <span class="cf-${esc(r.confiance)}">${esc(r.confiance)}</span>${r.controle?'<br><span class="muted">'+esc(r.controle)+'</span>':''}`;
@@ -779,7 +843,13 @@ function rowHtml(r){
 function selectRow(r,fly){
   S.selRow=r;MAP.selZone=null;
   if(isNum(r.lat)){if(fly){setCenter(r.lon,r.lat);MAP.z=Math.max(MAP.z,12);}const m=merc(r.lon,r.lat);showPop(m[0],m[1],rowHtml(r));}else hidePop();
-  render();
+  render();announce(rowText(r)+(isNum(r.lat)?'':', non géocodée'));
+}
+// point suivant / précédent parmi les lignes affichées qui ont des coordonnées
+function stepPoint(dir){
+  const pts=view().rows.filter(r=>isNum(r.lat)),i=stepIndex(pts.indexOf(S.selRow),pts.length,dir);
+  if(i<0){announce('Aucun point géocodé');return;}
+  selectRow(pts[i],true);
 }
 function onMapClick(sx,sy){
   let best=null,bd=100;
@@ -811,6 +881,14 @@ cv.addEventListener('pointercancel',()=>{MAP.drag=null;cv.classList.remove('drag
 cv.addEventListener('wheel',e=>{e.preventDefault();if(Date.now()-MAP.lastWheel<180)return;MAP.lastWheel=Date.now();
   const r=cv.getBoundingClientRect();zoomAt(e.deltaY<0?1:-1,e.clientX-r.left,e.clientY-r.top);},{passive:false});
 cv.addEventListener('dblclick',e=>{const r=cv.getBoundingClientRect();zoomAt(1,e.clientX-r.left,e.clientY-r.top);});
+cv.addEventListener('keydown',e=>{
+  const a=mapKeyAction(e);if(!a)return;e.preventDefault();
+  if(a.pan){const s=scale(),c=center();setCenter(...unmerc(c[0]+a.pan[0]/s,c[1]+a.pan[1]/s));draw();}
+  else if(a.zoom)zoomAt(a.zoom,MAP.W/2,MAP.H/2);
+  else if(a.fit){fit();announce('Carte ajustée aux points');}
+  else if(a.step)stepPoint(a.step);
+  else if(a.close){S.selRow=null;MAP.selZone=null;hidePop();render();announce('Sélection fermée');}
+});
 $('#zin').onclick=()=>zoomAt(1,MAP.W/2,MAP.H/2);
 $('#zout').onclick=()=>zoomAt(-1,MAP.W/2,MAP.H/2);
 $('#fit').onclick=fit;
@@ -830,6 +908,17 @@ $('#png').onclick=()=>{
     MAP.noTiles=false;draw();
   }};
 $('#tbody').onclick=e=>{const tr=e.target.closest('tr');if(!tr)return;selectRow(S.rows[+tr.dataset.i],true);$('#mapwrap').scrollIntoView({behavior:'smooth',block:'nearest'});};
+// tableau : une seule ligne dans l'ordre de tabulation (tabindex itinérant), flèches / Début / Fin / Pages, Entrée = afficher sur la carte
+$('#tbody').addEventListener('focusin',e=>{const tr=e.target.closest('tr');if(!tr||tr===S.tabTr)return;if(S.tabTr)S.tabTr.tabIndex=-1;tr.tabIndex=0;S.tabTr=tr;});
+$('#tbody').addEventListener('keydown',e=>{
+  const tr=e.target.closest('tr');if(!tr||e.target!==tr)return;
+  if(e.key==='Enter'||e.key===' '){
+    e.preventDefault();const r=S.rows[+tr.dataset.i];selectRow(r,true);
+    if(isNum(r.lat))cv.focus();                                       // le clavier peut alors piloter la carte
+    return;}
+  const rows=$('#tbody').rows,ni=moveIndex(e.key,tr.sectionRowIndex,rows.length);
+  if(ni===null)return;e.preventDefault();rows[ni].focus();
+});
 new ResizeObserver(resize).observe($('#mapwrap'));
 
 // ---- Session : données + résultats conservés dans IndexedDB pour survivre à la fermeture de l'onglet

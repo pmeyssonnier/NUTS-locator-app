@@ -31,6 +31,14 @@ Le fichier d'exemple se trouve dans [`exemples/exemple_societes_europe.xlsx`](ex
 
 La **confiance** (`HAUTE`, `MOYENNE`, `FAIBLE`) mesure la précision de la localisation. `HAUTE` exige un bâtiment trouvé, un code postal identique et un point dans le contour. La colonne `controle_manuel` vaut `OUI` dès que la confiance n'est pas `HAUTE`.
 
+## Accessibilité clavier
+
+- **Accès rapide** : au premier `Tab`, des liens permettent de sauter aux résultats ou à la carte.
+- **Tableau** : `Tab` entre dans le tableau (une seule ligne dans l'ordre de tabulation) ; `↑` `↓`, `Début`, `Fin`, `Page ↑` `Page ↓` changent de ligne ; `Entrée` affiche la ligne sur la carte et donne le focus à la carte ; `Tab` sort du tableau. `Entrée` ou `Espace` sur un en-tête trie la colonne (`aria-sort`).
+- **Carte** (quand elle a le focus) : `←` `↑` `→` `↓` déplacent la carte (`Maj` : plus loin) ; `+` et `−` zooment ; `0` ou `Début` ajustent la carte aux points ; `Page ↓` / `Page ↑` passent au point suivant / précédent ; `Échap` ferme l'info. Sur un clavier AZERTY, `+` et `0` demandent `Maj` ; les boutons de zoom restent accessibles par `Tab`.
+- **Lecteurs d'écran** : la sélection d'une ligne, le tri, la fin du géocodage et les erreurs sont annoncés (zone `aria-live`) ; l'indicateur de focus est visible partout.
+- **Limites** : les zones NUTS de la carte ne se sélectionnent qu'à la souris (les codes NUTS de chaque point sont dans le tableau) ; la couleur des points sur la carte n'est pas doublée par une forme (le statut figure en texte dans le tableau).
+
 ## Confidentialité et limites
 
 - Seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi. Les autres colonnes restent dans le navigateur.
@@ -56,7 +64,7 @@ npm test
 
 Les tests tournent aussi automatiquement sur GitHub (Actions, Node 20 et 22) à chaque push sur `main` et à chaque pull request : voir `.github/workflows/test.yml`.
 
-Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé).
+Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé).
 
 ## Sources et licences
 
