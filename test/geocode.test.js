@@ -257,3 +257,46 @@ test('ordre appris : un résultat vague ou un échec total n\'apprend rien',asyn
 
 // géocodeur simulé à comportement libre, avec journal des requêtes
 function fake_(fn){const calls=[];const g=async p=>{calls.push(p);return fn(p);};g.calls=calls;return g;}
+
+// ---------- Complément ignoré : doute sur le quartier ----------
+test('geocodeRow : seuls les essais sans complément sont marqués « loose »',async()=>{
+  const first=await L.geocodeRow(row({Adresse:'Abbey Road, Whitley',Num:'',Pays:'UK'}),M,CFG,fake(hit()));
+  assert.equal(first.loose,false);                                              // la rue telle quelle n'est jamais loose
+  const g3=fake(null,null,hit());                                               // 3e essai = « Abbey Road » (sans complément)
+  const r3=await L.geocodeRow(row({Adresse:'Abbey Road, Whitley',Num:'',Pays:'UK'}),M,CFG,g3);
+  assert.equal(r3.loose,true);assert.equal(g3.calls[2].street,'Abbey Road');
+  const g4=fake(null,null,hit());                                               // 3e essai = variante sans abréviation : pas loose
+  const r4=await L.geocodeRow(row({Adresse:'ul. Chemików',Num:'7',Pays:'PL'}),M,CFG,g4);
+  assert.equal(r4.loose,false);assert.match(r4.notes.join(' '),/sans l'abréviation/);
+});
+
+test('applyResult : complément ignoré non confirmé → A_VERIFIER / MOYENNE avec une note',()=>{
+  const r=apply(G({loose:true,postcode:'',notes:["trouvé sans le complément d'adresse (« Rue Neuve »)"]}));
+  assert.equal(r.statut,'A_VERIFIER');assert.equal(r.confiance,'MOYENNE');assert.equal(r.controle_manuel,'OUI');
+  assert.match(r.controle,/complément ignoré : quartier non confirmé par le code postal, à vérifier/);
+  assert.equal(r.NUTS3,'BE100');assert.equal(r.niveau_resultat,'BATIMENT');                 // la position affinée est conservée
+});
+
+test('applyResult : le code postal saisi retrouvé à l\'identique lève le doute',()=>{
+  const r=apply(G({loose:true,postcode:'1000',cpIn:'1000'}));
+  assert.equal(r.statut,'OK');assert.equal(r.confiance,'HAUTE');assert.doesNotMatch(r.controle,/complément ignoré/);
+  const uk=apply(G({loose:true,iso:'BE',postcode:'1000',cpIn:'1 000'}));                      // comparaison normalisée (espaces, casse)
+  assert.equal(uk.statut,'OK');
+  const near=apply(G({loose:true,postcode:'1040',cpIn:'1000'}));                                // code postal différent : cpKo, déjà A_VERIFIER
+  assert.equal(near.statut,'A_VERIFIER');
+});
+
+test('applyResult : un essai non loose n\'est pas affecté',()=>{
+  assert.equal(apply(G({loose:false})).statut,'OK');assert.equal(apply(G({})).confiance,'HAUTE');
+});
+
+test('Jaguar Land Rover (export réel) : « Abbey Road, Whitley » trouvé sans le complément → A_VERIFIER avec la rue pour position',async()=>{
+  const uk=L.prepNuts([{type:'Feature',properties:{NUTS_ID:'UKG33',NAME_LATN:'Coventry'},geometry:{type:'Polygon',coordinates:[sq(-1.49,52.39,.2)]}}]);uk[0].v='2021';
+  const g=fake(null,null,{lat:52.38845,lon:-1.489588,label:'Abbey Road, Lower Stoke, Coventry',postcode:'CV3 4BN',cc:'GB',rank:26,atype:'road'});
+  const found=await L.geocodeRow(row({Adresse:'Abbey Road, Whitley',Num:'',CP:'CV3 4LF',Ville:'Coventry',Pays:'UK'}),M,CFG,g);
+  const r={};L.RES.forEach(c=>r[c]='');
+  L.applyResult(r,found,{...CFG,uk:true},uk,{UKG33:'Coventry'});
+  assert.equal(r.statut,'A_VERIFIER');assert.equal(r.confiance,'MOYENNE');assert.equal(r.controle_manuel,'OUI');
+  assert.equal(r.niveau_resultat,'RUE');assert.equal(r.NUTS3,'UKG33');assert.equal(r.lat,52.38845);   // la position de la rue est conservée
+  assert.match(r.controle,/sans le complément d'adresse \(« Abbey Road »\)/);assert.match(r.controle,/quartier non confirmé/);
+});
