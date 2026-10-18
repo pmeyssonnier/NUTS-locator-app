@@ -61,6 +61,7 @@ tbody tr.sel td:first-child{box-shadow:inset 4px 0 0 var(--acc)}
 .skip:focus{top:8px}
 .warn{margin:10px;padding:12px 14px;border:1px solid var(--err);border-radius:8px;background:var(--card);color:var(--err);font-weight:600}
 footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
+#ver{font-weight:600}
 
 /* ---- Mobile : liste de cartes à la place du tableau, barre de sections, carte adaptée ---- */
 .m-only{display:none}

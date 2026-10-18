@@ -210,7 +210,11 @@ Les tests Node importent directement `src/lib/` : ils exécutent le code réelle
 
 Les tests tournent aussi automatiquement sur GitHub (Actions, Node 20 et 22) à chaque push sur `main` et à chaque pull request : voir `.github/workflows/test.yml`.
 
-Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/markers.test.js` (formes et couleurs des points), `test/mobile.test.js` (zoom au pincement, tuiles, pagination des cartes), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé), `test/postcodes.test.js` (tables code postal → NUTS : lecture, recherche, comparaison).
+Fichiers de test : `test/postal.test.js` (pays, codes postaux, règle de statut), `test/keyboard.test.js` (touches de la carte et du tableau), `test/markers.test.js` (formes et couleurs des points), `test/mobile.test.js` (zoom au pincement, tuiles, pagination des cartes), `test/nuts.test.js` (géométrie), `test/files.test.js` (CSV, XLSX, export CSV), `test/geocode.test.js` (stratégie de géocodage et rattachement NUTS avec un géocodeur simulé), `test/postcodes.test.js` (tables code postal → NUTS : lecture, recherche, comparaison), `test/version.test.js` (numéro de version).
+
+## Numéro de version
+
+Le pied de page de l'application affiche « NUTS Locator v… (date) ». Après une mise à jour de la page publiée (GitHub Pages met une à deux minutes à se rafraîchir), comparez ce numéro à celui de la dernière version fusionnée ; s'il est ancien, rechargez sans le cache du navigateur. Pour publier une nouvelle version, modifier `src/version.js` (`VERSION`, `VERSION_DATE`) et `version` dans `package.json` : un test vérifie que les deux concordent.
 
 ## Sources et licences
 
