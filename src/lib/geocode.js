@@ -98,6 +98,31 @@ export function applyResult(r,g,cfg,nuts,names,postal){
   }
   done(decide({precise,niveau:r.niveau_resultat,paysKo,cpKo,loose,cpNutsKo,exact:n.exact}));
 }
+// Mode sans géocodage : le NUTS 3 est déduit du seul code postal par la table Eurostat du pays (aucune position, aucun appel réseau).
+// Statuts : CP_SEUL (un NUTS 3), A_VERIFIER (plusieurs NUTS 3 possibles), ECHEC_CP (pays, code ou table manquants).
+export function resolveByPostcode(r,m,cfg,names,postal){
+  RES.forEach(c=>r[c]='');
+  const pays=val(r,m.pays)||cfg.defPays,iso=isoOf(pays),fx=fixCp(val(r,m.cp),iso),cp=fx.cp,notes=fx.note?[fx.note]:[];
+  const done=d=>{Object.assign(r,d);r.controle=notes.join(' ; ');};
+  const fail=msg=>{notes.push(msg);return done({statut:'ECHEC_CP',confiance:'FAIBLE',controle_manuel:'OUI'});};
+  const table=iso&&postal?.[iso];
+  if(!cp)return fail('code postal manquant');
+  if(!iso)return fail(`pays non reconnu (« ${pays} »)`);
+  if(!table)return fail(`aucune table Eurostat importée pour ${iso}`+(iso==='GB'?' (le Royaume-Uni n\'est pas dans les tables NUTS 2024)':''));
+  const cand=lookupPostcode(table,cp,iso);
+  if(!cand)return fail('code postal absent de la table Eurostat (code non géographique, récent ou erroné)');
+  r.precision='CODE_POSTAL_TABLE';r.NUTS_version=table.nutsVersion||'';r.NUTS3_codepostal=cand.join('|');r.controle_cp_nuts='TABLE_SEULE';
+  // chaque niveau n'est renseigné que si tous les candidats le partagent
+  [['NUTS0',2],['NUTS1',3],['NUTS2',4],['NUTS3',5]].forEach(([k,l])=>{
+    const code=cand[0].slice(0,l);if(!cand.every(c=>c.slice(0,l)===code))return;
+    r[k]=code;r[k+'_nom']=(names||{})[code]||'';});
+  if(!table.entries[normCp(cp)])notes.push('code complet absent de la table : seuls les 4 premiers chiffres ont servi');
+  if(cand.length>1){
+    notes.push(`plusieurs NUTS 3 possibles pour ce code postal (${cand.join('|')})`);
+    return done({statut:'A_VERIFIER',confiance:'FAIBLE',controle_manuel:'OUI'});}
+  notes.push('NUTS 3 déduit du code postal seul (centroïde du code postal selon Eurostat) : aucune position vérifiée');
+  return done({statut:'CP_SEUL',confiance:'MOYENNE',controle_manuel:'NON'});
+}
 export function summarize(rows){
   const c={},f={},v=new Set();rows.forEach(r=>{const k=r.statut||'NON_TRAITE';c[k]=(c[k]||0)+1;if(r.confiance)f[r.confiance]=(f[r.confiance]||0)+1;if(r.NUTS_version)v.add(r.NUTS_version);});
   const fmt=o=>Object.entries(o).map(([k,n])=>`${k}: ${n}`).join(' · ');

@@ -26,6 +26,14 @@ async function loadUKNames(){
   for(const f of g.features){const id=f.properties.NUTS_ID;if(String(id).startsWith('UK'))S.names[id]=cleanName(f.properties.NAME_LATN);}
   S.ukNames=true;
 }
+// Libellés Eurostat seuls (mode sans géocodage : pas besoin des contours)
+export async function loadNames(){
+  if(S.names)return;
+  setStatus('Téléchargement des libellés Eurostat…');
+  const g=await gisco('NUTS_RG_60M_2024_4326.geojson');
+  const n={};for(const f of g.features)n[f.properties.NUTS_ID]=cleanName(f.properties.NAME_LATN);
+  S.names=n;
+}
 export function loadNuts(res){
   const k=res+'_'+(ukOn()?1:0);
   return NP[k]??=(async()=>{

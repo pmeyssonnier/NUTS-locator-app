@@ -61,6 +61,9 @@
       <button id="pcClear" hidden>Retirer les tables</button>
     </div>
     <div id="pcStatus" class="muted" style="margin-top:6px"></div>
+    <div class="row" style="margin-top:10px">
+      <label class="inline" title="Aucun géocodage ni appel à Nominatim : le NUTS 3 est déduit du seul code postal par les tables Eurostat importées ci-dessus. Moins précis (centroïde du code postal), sans position ni carte, mais instantané et hors ligne."><input type="checkbox" id="noGeo"> Sans géocodage : NUTS 3 déduit du code postal (tables Eurostat)</label>
+    </div>
     <div class="progress"><div id="bar"></div></div>
     <div id="status">Prêt.</div>
     <p class="notice">Confidentialité : seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi ; noms, prénoms et autres colonnes restent dans votre navigateur. Les réponses du géocodeur et les contours NUTS sont gardés en cache dans ce navigateur (IndexedDB ; bouton « Vider le cache » pour le géocodage) ; la dernière session (données importées et résultats, hors e-mail) y est aussi conservée pour pouvoir être restaurée (bouton « Oublier la session » pour l'effacer) ; le fond de carte charge des tuiles depuis le serveur choisi. Le serveur public Nominatim est limité à 1 requête/s et n'est pas prévu pour du géocodage massif.</p>
@@ -74,7 +77,7 @@
       <button class="primary" id="exp" disabled>Exporter (.xlsx)</button>
       <button id="expCsv" disabled>CSV</button>
       <button id="expGeo" disabled title="Points (lat/lon) avec tous les attributs — QGIS, PostGIS">GeoJSON</button>
-      <button id="expAno" disabled title="Toutes les lignes (filtre ignoré) dont le statut n'est pas OK ou la confiance n'est pas HAUTE">Exporter les lignes à contrôler</button>
+      <button id="expAno" disabled title="Toutes les lignes (filtre ignoré) marquées « à contrôler » : statut autre que OK ou confiance non HAUTE">Exporter les lignes à contrôler</button>
       <label class="m-only" id="lblSort">Trier par<select id="sortSel"></select></label>
       <button class="m-only" id="sortDir" aria-label="Inverser le sens du tri" title="Inverser le sens du tri">↕ Sens</button>
       <span id="count" class="muted" role="status"></span>
