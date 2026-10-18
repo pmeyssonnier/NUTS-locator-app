@@ -49,3 +49,16 @@ test('distRingKm : distance à un anneau',()=>{
   assert.ok(Math.abs(L.distRingKm(0,2,ring)-111.32)<1,'1° de latitude ≈ 111 km');
   assert.ok(L.distRingKm(1,0,ring)<0.01,'point sur le bord');
 });
+
+test('cleanName : libellés Eurostat nettoyés',()=>{
+  assert.equal(L.cleanName('Hauts-de-Seine '),'Hauts-de-Seine');
+  assert.equal(L.cleanName('  Ile  de   France '),'Ile de France');
+  assert.equal(L.cleanName('Région de Bruxelles-Capitale/ Brussels Hoofdstedelijk Gewest'),'Région de Bruxelles-Capitale/Brussels Hoofdstedelijk Gewest');
+  assert.equal(L.cleanName('Arr. de Bruxelles-Capitale / Arr. Brussel-Hoofdstad'),'Arr. de Bruxelles-Capitale/Arr. Brussel-Hoofdstad');
+  assert.equal(L.cleanName(null),'');assert.equal(L.cleanName(undefined),'');assert.equal(L.cleanName(42),'42');
+});
+
+test('prepNuts : le nom de la zone est nettoyé',()=>{
+  const r=L.prepNuts([{type:'Feature',properties:{NUTS_ID:'FR105',NAME_LATN:'Hauts-de-Seine '},geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]}}]);
+  assert.equal(r[0].name,'Hauts-de-Seine');
+});

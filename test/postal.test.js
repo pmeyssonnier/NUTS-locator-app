@@ -84,3 +84,14 @@ test('decide : statut et confiance',()=>{
   assert.deepEqual(D({paysKo:true}),{statut:'PAYS_INCOHERENT',confiance:'FAIBLE',controle_manuel:'OUI'});
   assert.equal(D({paysKo:true,cpKo:true,exact:false}).statut,'PAYS_INCOHERENT');   // le pays prime
 });
+
+test('stripLocality : retire le complément après une virgule, sans perdre le numéro',()=>{
+  assert.equal(L.stripLocality('Abbey Road, Whitley'),'Abbey Road');
+  assert.equal(L.stripLocality('7 Abbey Road, Whitley'),'7 Abbey Road');
+  assert.equal(L.stripLocality('Rue de la Paix, Bât B'),'Rue de la Paix');
+  assert.equal(L.stripLocality('Brouwerijplein 1'),'Brouwerijplein 1');            // pas de virgule
+  assert.equal(L.stripLocality('Rue X, 12'),'Rue X, 12');                          // le numéro après la virgule est conservé
+  assert.equal(L.stripLocality('12, Rue X'),'12, Rue X');                          // pas de lettres avant la virgule
+  assert.equal(L.stripLocality('Rue X,'),'Rue X,');                                // rien après la virgule
+  assert.equal(L.stripLocality(''),'');
+});

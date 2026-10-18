@@ -1,4 +1,4 @@
-import {prepNuts} from '../lib/geo.js';
+import {cleanName, prepNuts} from '../lib/geo.js';
 import {setStatus} from './dom.js';
 import {lkey, S, ukOn} from './state.js';
 import {dbGet, dbPut} from './storage.js';
@@ -23,7 +23,7 @@ export async function addUK(feats,l,res){
 async function loadUKNames(){
   if(!ukOn()||S.ukNames)return;
   const g=await gisco('NUTS_RG_60M_2021_4326.geojson');
-  for(const f of g.features){const id=f.properties.NUTS_ID;if(String(id).startsWith('UK'))S.names[id]=f.properties.NAME_LATN;}
+  for(const f of g.features){const id=f.properties.NUTS_ID;if(String(id).startsWith('UK'))S.names[id]=cleanName(f.properties.NAME_LATN);}
   S.ukNames=true;
 }
 export function loadNuts(res){
@@ -32,7 +32,7 @@ export function loadNuts(res){
     setStatus(`Téléchargement des contours NUTS 3 (${res}) et des libellés Eurostat…`);
     const [g3,gall]=await Promise.all([gisco(`NUTS_RG_${res}_2024_4326_LEVL_3.geojson`),
       S.names?null:gisco('NUTS_RG_60M_2024_4326.geojson')]);
-    if(gall){S.names={};for(const f of gall.features)S.names[f.properties.NUTS_ID]=f.properties.NAME_LATN;}
+    if(gall){S.names={};for(const f of gall.features)S.names[f.properties.NUTS_ID]=cleanName(f.properties.NAME_LATN);}
     let feats=prepNuts(g3.features);for(const f of feats)S.names[f.id]=f.name;
     if(ukOn()){setStatus('Téléchargement des zones Royaume-Uni (NUTS 2021)…');feats=await addUK(feats,3,res);await loadUKNames();}
     S.levels[lkey(3,res)]=feats;S.nuts=feats;S.nutsRes=res;

@@ -26,6 +26,12 @@ Le fichier d'exemple se trouve dans [`exemples/exemple_societes_europe.xlsx`](ex
 
 Un second exemple, [`exemples/exemple_multi_feuilles.xlsx`](exemples/exemple_multi_feuilles.xlsx), a trois feuilles (dont une masquée) avec des colonnes dans des ordres différents, pour essayer la liste « Feuille » et la fusion.
 
+## Stratégie de géocodage
+
+Pour chaque ligne, l'application essaie la rue sous plusieurs formes, de la plus fidèle à la plus simplifiée, chacune en recherche structurée puis en recherche libre : l'adresse telle quelle, sans abréviation de type de voie (« ul. », « bd. »…), sans complément après une virgule (« Abbey Road, Whitley » → « Abbey Road »), puis les deux. Le numéro est ajouté après avoir retiré le complément, pour ne pas le perdre. Si aucune adresse n'aboutit, elle se rabat sur le code postal puis sur la ville (confiance `FAIBLE`, statut `A_VERIFIER`).
+
+L'ordre des essais est **appris pays par pays** pendant la session : un essai qui n'a jamais réussi pour un pays après deux échecs passe en dernier recours (il reste tenté s'il le faut, et reprend sa place dès qu'il réussit). Cela évite, par exemple, de perdre une requête par ligne quand la recherche structurée n'aboutit jamais pour la Pologne ou la Tchéquie. Seuls les résultats au niveau de la rue ou du bâtiment servent à apprendre. Les libellés Eurostat sont nettoyés (espaces en trop retirés).
+
 ## Statut et confiance
 
 | Statut | Signification |
