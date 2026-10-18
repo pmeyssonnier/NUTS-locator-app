@@ -106,3 +106,87 @@ test('csvCell : décimale française, formules neutralisées, guillemets',()=>{
   assert.equal(L.csvCell('a;b'),'"a;b"');assert.equal(L.csvCell('il dit "oui"'),'"il dit ""oui"""');
   assert.equal(L.csvCell('l1\nl2'),'"l1\nl2"');assert.equal(L.csvCell(null),'');assert.equal(L.csvCell(undefined),'');
 });
+
+// ---------- Feuilles multiples ----------
+const NSX='http://schemas.openxmlformats.org';
+const sheetXml=rows=>`<worksheet><sheetData>${rows.map((r,i)=>`<row r="${i+1}">${r.map((v,c)=>v===''?'':`<c r="${L.colName(c)}${i+1}" t="inlineStr"><is><t>${L.xmlEsc(v)}</t></is></c>`).join('')}</row>`).join('')}</sheetData></worksheet>`;
+// classeur de test : [{name, rows, state?}]
+function workbook(sheets){
+  const files={
+    'xl/workbook.xml':`<workbook xmlns="${NSX}/spreadsheetml/2006/main" xmlns:r="${NSX}/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${L.xmlEsc(s.name)}" sheetId="${i+1}"${s.state?` state="${s.state}"`:''} r:id="rId${i+10}"/>`).join('')}</sheets></workbook>`,
+    'xl/_rels/workbook.xml.rels':`<Relationships>${sheets.map((s,i)=>`<Relationship Id="rId${i+10}" Target="worksheets/s${i+1}.xml"/>`).join('')}</Relationships>`
+  };
+  sheets.forEach((s,i)=>{files[`xl/worksheets/s${i+1}.xml`]=sheetXml(s.rows);});
+  return zipDeflate(files);
+}
+
+test('readXlsxBook : liste des feuilles, état masqué, noms avec caractères spéciaux',async()=>{
+  const book=await L.readXlsxBook(workbook([
+    {name:'Clients & Cie',rows:[['A'],['1']]},{name:'Archive',state:'hidden',rows:[['A'],['2']]},{name:'Très caché',state:'veryHidden',rows:[['A'],['3']]},{name:'Avril 2026',rows:[['A'],['4']]}
+  ]));
+  assert.deepEqual(book.sheets,[
+    {i:0,name:'Clients & Cie',hidden:false},{i:1,name:'Archive',hidden:true},{i:2,name:'Très caché',hidden:true},{i:3,name:'Avril 2026',hidden:false}]);
+  assert.equal(L.firstVisible(book.sheets),0);
+});
+
+test('readXlsxBook.read : chaque feuille se lit par son index',async()=>{
+  const book=await L.readXlsxBook(workbook([
+    {name:'S1',rows:[['Nom','Ville'],['Peeters','Leuven']]},{name:'S2',rows:[['Nom','Ville'],['Dubois','Bruxelles'],['Janssens','Gent']]}]));
+  assert.deepEqual(await book.read(0),[['Nom','Ville'],['Peeters','Leuven']]);
+  assert.equal((await book.read(1)).length,3);
+  await assert.rejects(()=>book.read(5),/feuille 5 introuvable/);
+});
+
+test('readXlsx : sans index, première feuille visible (une feuille masquée en tête est sautée)',async()=>{
+  const z=workbook([{name:'Calculs',state:'hidden',rows:[['x'],['cachée']]},{name:'Données',rows:[['y'],['visible']]}]);
+  assert.deepEqual(await L.readXlsx(z),[['y'],['visible']]);
+  assert.deepEqual(await L.readXlsx(z,0),[['x'],['cachée']]);       // lecture explicite d'une feuille masquée
+  assert.equal(L.firstVisible([{i:0,hidden:true},{i:1,hidden:true}]),0);   // tout masqué : la première
+});
+
+test('readXlsxBook : feuille déclarée mais absente du fichier',async()=>{
+  const z=zipDeflate({
+    'xl/workbook.xml':`<workbook xmlns:r="${NSX}/officeDocument/2006/relationships"><sheets><sheet name="Fantôme" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    'xl/_rels/workbook.xml.rels':`<Relationships><Relationship Id="rId1" Target="worksheets/absente.xml"/></Relationships>`});
+  const book=await L.readXlsxBook(z);
+  await assert.rejects(()=>book.read(0),/feuille « Fantôme » introuvable/);
+});
+
+test('mergeSheets : colonnes alignées par nom, union, colonne « Feuille » à la fin',()=>{
+  const out=L.mergeSheets([
+    {name:'BE',grid:[['Société','Ville'],['AB InBev','Leuven']]},
+    {name:'FR',grid:[['Ville','Société','Pays'],['Paris','Airbus','FR'],['Lyon','Sanofi','FR']]}]);
+  assert.deepEqual(out,[
+    ['Société','Ville','Pays','Feuille'],
+    ['AB InBev','Leuven','','BE'],
+    ['Airbus','Paris','FR','FR'],
+    ['Sanofi','Lyon','FR','FR']]);
+});
+
+test('mergeSheets : feuilles vides ou sans données ignorées, lignes vides retirées',()=>{
+  const out=L.mergeSheets([
+    {name:'Vide',grid:[]},{name:'Entête seul',grid:[['A','B']]},{name:'Blanc',grid:[['',''],['','']]},
+    {name:'OK',grid:[['A','B'],['',''],['1','2']]}]);
+  assert.deepEqual(out,[['A','B','Feuille'],['1','2','OK']]);
+  assert.deepEqual(L.mergeSheets([]),[['Feuille']]);
+});
+
+test('mergeSheets : en-têtes en double, en-tête vide et collision avec « Feuille »',()=>{
+  const out=L.mergeSheets([{name:'X',grid:[['Nom','Nom','','Feuille'],['a','b','c','d']]}]);
+  assert.deepEqual(out,[['Nom','Nom_2','Col_3','Feuille','Feuille_'],['a','b','c','d','X']]);
+});
+
+test('mergeSheets : valeurs numériques conservées, cellules absentes vides',()=>{
+  const out=L.mergeSheets([{name:'N',grid:[['Code','Montant'],['1000']]}]);
+  assert.deepEqual(out,[['Code','Montant','Feuille'],['1000','','N']]);
+});
+
+test('exemple multi-feuilles du dépôt : 3 feuilles dont une masquée, fusion des 2 visibles',async()=>{
+  const f=fs.readFileSync(path.join(__dirname,'..','exemples','exemple_multi_feuilles.xlsx'));
+  const book=await L.readXlsxBook(buf(f));
+  assert.deepEqual(book.sheets.map(s=>[s.name,s.hidden]),[['Belgique',false],['France & DOM',false],['Brouillon',true]]);
+  const merged=L.mergeSheets(await Promise.all(book.sheets.filter(s=>!s.hidden).map(async s=>({name:s.name,grid:await book.read(s.i)}))));
+  assert.deepEqual(merged[0],['Société','Adresse','Code postal','Ville','Pays','Feuille']);
+  assert.equal(merged.length,6);
+  assert.deepEqual(merged[3],['TotalEnergies','2 Place Jean Millier','92400','Courbevoie','FR','France & DOM']);
+});
