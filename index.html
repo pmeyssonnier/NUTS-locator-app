@@ -34,7 +34,10 @@
 
   <section class="card" id="sec-geo" tabindex="-1" aria-labelledby="h-geo">
     <h2 id="h-geo">2. Colonnes &amp; géocodage</h2>
-    <div class="row" id="mapBox"></div>
+    <details class="fold" id="dMap"><summary id="sMap">Colonnes utilisées</summary>
+      <div class="row" id="mapBox"></div>
+    </details>
+    <details class="fold" id="dSet"><summary id="sSet">Réglages</summary>
     <div class="row" style="margin-top:10px">
       <label>Pays par défaut (si vide)<input type="text" id="defPays" value="BE" style="min-width:80px;width:80px"></label>
       <label>Précision contours NUTS
@@ -47,27 +50,32 @@
       <label class="inline" title="Le Royaume-Uni n'est plus dans NUTS 2024 : ses zones sont prises dans NUTS 2021"><input type="checkbox" id="withUK"> Inclure le Royaume-Uni (NUTS 2021)</label>
       <label class="wide">E-mail (politique Nominatim)<input type="email" id="email" placeholder="vous@exemple.be"></label>
       <label class="wide">Serveur Nominatim<input type="url" id="nomUrl" value="https://nominatim.openstreetmap.org" style="min-width:260px"></label>
-    </div>
-    <div class="row" style="margin-top:10px">
       <label>Tolérance « NUTS proche » (km)<input type="number" id="maxKm" value="3" min="0" step="0.5" style="min-width:80px;width:90px"></label>
-      <label class="inline"><input type="checkbox" id="onlyMissing"> Seulement les lignes non « OK »</label>
-      <button class="primary" id="run" disabled>Géocoder</button>
-      <button id="stop" disabled>Arrêter</button>
-      <button id="clearCache">Vider le cache</button>
-      <label class="wide" title="Si GISCO est bloqué (pare-feu) : téléchargez les fichiers NUTS_RG_…geojson ailleurs puis importez-les ici">Importer des contours (GeoJSON GISCO)<input type="file" id="geoFiles" accept=".geojson,.json" multiple></label>
     </div>
-    <div class="row" style="margin-top:10px">
+    </details>
+    <details class="fold" id="dImp"><summary id="sImp">Imports hors ligne</summary>
+    <div class="row">
+      <label class="wide" title="Si GISCO est bloqué (pare-feu) : téléchargez les fichiers NUTS_RG_…geojson ailleurs puis importez-les ici">Importer des contours (GeoJSON GISCO)<input type="file" id="geoFiles" accept=".geojson,.json" multiple></label>
       <label class="wide" title="Tables « code postal → NUTS 3 » publiées par Eurostat (Tercet), au format .zip tel que téléchargé ou .csv : le NUTS 3 trouvé par la position du point est comparé à celui du code postal (prototype)">Tables code postal → NUTS 3 (Eurostat, prototype)<input type="file" id="pcFiles" accept=".zip,.csv,.txt" multiple></label>
       <button id="pcClear" hidden>Retirer les tables</button>
     </div>
     <div id="pcStatus" class="muted" style="margin-top:6px"></div>
     <div id="storeInfo" class="muted" role="status" style="margin-top:6px"></div>
+    </details>
     <div class="row" style="margin-top:10px">
+      <label class="inline"><input type="checkbox" id="onlyMissing"> Seulement les lignes non « OK »</label>
       <label class="inline" title="Aucun géocodage ni appel à Nominatim : le NUTS 3 est déduit du seul code postal par les tables Eurostat importées ci-dessus. Moins précis (centroïde du code postal), sans position ni carte, mais instantané et hors ligne."><input type="checkbox" id="noGeo" autocomplete="off"> Sans géocodage : NUTS 3 déduit du code postal (tables Eurostat)</label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="run" disabled>Géocoder</button>
+      <button id="stop" disabled>Arrêter</button>
+      <button id="clearCache">Vider le cache</button>
     </div>
     <div class="progress"><div id="bar"></div></div>
     <div id="status">Prêt.</div>
+    <details class="fold" id="dPriv"><summary>Confidentialité et limites</summary>
     <p class="notice">Confidentialité : seuls les champs Adresse, Numéro, Code postal, Ville et Pays sont envoyés au serveur Nominatim choisi ; noms, prénoms et autres colonnes restent dans votre navigateur. Les réponses du géocodeur et les contours NUTS sont gardés en cache dans ce navigateur (IndexedDB ; bouton « Vider le cache » pour le géocodage) ; la dernière session (données importées et résultats, hors e-mail) y est aussi conservée pour pouvoir être restaurée (bouton « Oublier la session » pour l'effacer) ; le fond de carte charge des tuiles depuis le serveur choisi. Le serveur public Nominatim est limité à 1 requête/s et n'est pas prévu pour du géocodage massif.</p>
+    </details>
   </section>
 
   <section class="card" id="sec-results" tabindex="-1" aria-labelledby="h-results">

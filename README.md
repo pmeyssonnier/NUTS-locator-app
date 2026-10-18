@@ -16,7 +16,7 @@ Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le cod
 - **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez http://localhost:8000. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
 
 1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ».
-2. **Colonnes & géocodage** : vérifiez le mappage (Adresse, Numéro, Code postal, Ville, Pays), renseignez votre e-mail (politique Nominatim), puis cliquez sur « Géocoder ».
+2. **Colonnes & géocodage** : les colonnes sont reconnues automatiquement (le résumé les affiche) ; cliquez sur « Géocoder ». Les sections « Colonnes », « Réglages » (e-mail pour la politique Nominatim, pays par défaut, précision des contours, Royaume-Uni, serveur), « Imports hors ligne » (contours, tables Eurostat) et « Confidentialité et limites » sont repliées pour tenir sur un écran de téléphone ; un clic sur leur titre les ouvre. La section « Colonnes » s'ouvre d'elle-même quand aucune colonne n'est reconnue.
 3. **Résultats** : filtrez, triez, exportez. « Exporter les lignes à contrôler » isole les lignes dont le statut n'est pas `OK` ou la confiance pas `HAUTE`.
 4. **Carte** : choisissez le niveau de contours NUTS et le fond de carte.
 
