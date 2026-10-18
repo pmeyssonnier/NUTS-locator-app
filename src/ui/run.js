@@ -8,7 +8,18 @@ import {render, renderSoon} from './render.js';
 import {saveSession} from './session.js';
 import {getMap, lkey, S, summary, ukOn} from './state.js';
 
-const apply=(r,g,cfg)=>applyResult(r,g,cfg,S.nuts,S.names,S.postal);
+// le résultat brut du géocodeur est gardé sur la ligne (r.__g) : les tables de codes postaux peuvent ainsi être appliquées sans géocoder à nouveau
+const apply=(r,g,cfg)=>{r.__g=g;applyResult(r,g,cfg,S.nuts,S.names,S.postal);};
+// Recalcule les lignes déjà géocodées avec les tables actuelles. Renvoie {done, stale} (stale : lignes traitées sans résultat gardé, à relancer) ou null si les contours manquent.
+export async function reapplyPostal(){
+  const rows=S.rows.filter(r=>r.__g),stale=S.rows.filter(r=>r.statut&&!r.__g&&r.precision!=='CODE_POSTAL_TABLE'&&r.statut!=='ERREUR'&&r.statut!=='ECHEC_CP').length;
+  if(!rows.length)return {done:0,stale};
+  try{await loadNuts($('#res').value);S.nuts=S.levels[lkey(3,$('#res').value)];}catch(e){return null;}
+  const cfg={maxKm:Math.max(0,+$('#maxKm').value||0),uk:ukOn()};
+  for(const r of rows)apply(r,r.__g,cfg);
+  await saveSession();
+  return {done:rows.length,stale};
+}
 // Mode sans géocodage : NUTS 3 déduit du code postal par les tables Eurostat, sans position ni réseau (hors libellés)
 async function runNoGeo(m){
   if(!m.cp){setStatus('Indiquez la colonne Code postal.',true);return;}
@@ -18,7 +29,7 @@ async function runNoGeo(m){
   try{await loadNames();names=S.names;}catch(e){names={};setStatus('Libellés Eurostat indisponibles (les codes NUTS restent valides) : '+e.message,true);}
   const cfg={defPays:$('#defPays').value},rowsRef=S.rows;
   const todo=S.rows.filter(r=>!$('#onlyMissing').checked||r.statut!=='OK');
-  for(const r of todo){if(S.rows!==rowsRef)break;resolveByPostcode(r,m,cfg,names,S.postal);}
+  for(const r of todo){if(S.rows!==rowsRef)break;delete r.__g;resolveByPostcode(r,m,cfg,names,S.postal);}
   $('#bar').style.width='100%';
   S.running=false;btns();await saveSession();
   const msg=`Terminé (sans géocodage, ${todo.length} ligne(s)). `+summary();
@@ -35,7 +46,7 @@ export async function run(){
   for(const r of todo){
     if(!S.running||S.rows!==rowsRef)break;i++;
     try{const g=await geocodeRow(r,m,cfg,nominatim);if(cfg.signal.aborted){i--;break;}apply(r,g,cfg);bad=0;}
-    catch(e){if(e.name==='AbortError'||cfg.signal.aborted){i--;break;}RES.forEach(c=>r[c]='');r.statut='ERREUR';r.confiance='FAIBLE';r.controle_manuel='OUI';r.controle=e.message;
+    catch(e){if(e.name==='AbortError'||cfg.signal.aborted){i--;break;}delete r.__g;RES.forEach(c=>r[c]='');r.statut='ERREUR';r.confiance='FAIBLE';r.controle_manuel='OUI';r.controle=e.message;
       if(++bad>=5){halt=true;break;}}
     $('#bar').style.width=(100*i/todo.length)+'%';
     const eta=Math.round((Date.now()-t0)/i*(todo.length-i)/1000);
@@ -49,6 +60,8 @@ export async function run(){
 }
 export function initRun(){
   $('#run').onclick=run;
-  $('#noGeo').onchange=e=>{$('#run').textContent=e.target.checked?'Déterminer le NUTS':'Géocoder';};
+  // le libellé suit la case, y compris quand le navigateur la restaure cochée à la réouverture de la page
+  const label=()=>{$('#run').textContent=$('#noGeo').checked?'Déterminer le NUTS':'Géocoder';};
+  $('#noGeo').onchange=label;label();addEventListener('pageshow',label);
   $('#stop').onclick=()=>{S.running=false;S.ctrl?.abort();};
 }

@@ -1,4 +1,5 @@
 import {$, setStatus} from './dom.js';
+import {refreshStorage} from './storeinfo.js';
 import {ensureLevel} from './map.js';
 import {resetNutsCache} from './nuts.js';
 import {S} from './state.js';
@@ -16,7 +17,7 @@ export function initCache(){
         const j=JSON.parse(await f.text());if(!Array.isArray(j.features))throw new Error('pas un GeoJSON');
         await dbPut('geo',f.name,j);ok.push(f.name);}catch(err){ko.push(f.name+' ('+err.message+')');}
     }
-    resetNutsCache();S.levels={};S.names=null;S.ukNames=false;
+    refreshStorage(true);resetNutsCache();S.levels={};S.names=null;S.ukNames=false;
     e.target.value='';await ensureLevel();
     setStatus(`Contours importés : ${ok.length}${ok.length?' — '+ok.join(', '):''}${ko.length?'\nRefusés : '+ko.join(' ; '):''}`,ko.length>0);
   });

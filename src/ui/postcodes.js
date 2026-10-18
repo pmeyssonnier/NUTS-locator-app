@@ -2,7 +2,10 @@ import {decodeText} from '../lib/csv.js';
 import {parsePostcodeTables} from '../lib/postcodes.js';
 import {zipOpen, zipText} from '../lib/zip.js';
 import {$, setStatus} from './dom.js';
-import {S} from './state.js';
+import {render} from './render.js';
+import {reapplyPostal} from './run.js';
+import {refreshStorage} from './storeinfo.js';
+import {S, summary} from './state.js';
 import {dbGet, dbPut} from './storage.js';
 
 // Tables « code postal → NUTS 3 » d'Eurostat (Tercet) : PROTOTYPE de contrôle croisé.
@@ -26,6 +29,14 @@ async function readTables(file){
   return out;
 }
 async function save(){await dbPut('geo',INDEX,Object.keys(S.postal));}
+// applique les tables (ou leur retrait) aux lignes déjà géocodées, sans nouvel appel au géocodeur
+async function refresh(){
+  const r=await reapplyPostal();
+  if(!r)return 'Contours NUTS indisponibles : relancez « Géocoder » pour appliquer les tables aux lignes déjà traitées.';
+  if(r.done)render();
+  return (r.done?`${r.done} ligne(s) déjà géocodée(s) recalculée(s) avec les tables actuelles.\n${summary()}`:'')
+    +(r.stale?`${r.done?'\n':''}${r.stale} ligne(s) d'une ancienne session ne peuvent pas être recalculées : relancez « Géocoder » (décochez « Seulement les lignes non OK »).`:'');
+}
 
 export function initPostcodes(){
   $('#pcFiles').addEventListener('change',async e=>{
@@ -39,16 +50,19 @@ export function initPostcodes(){
       }}catch(err){ko.push(f.name+' ('+err.message+')');}
     }
     await save();e.target.value='';show();
-    setStatus(`Tables importées : ${ok.length} pays${ok.length?' — '+ok.join(' ; '):''}${ko.length?'\nRefusées : '+ko.join(' ; '):''}`,ko.length>0);
+    const base=`Tables importées : ${ok.length} pays${ok.length?' — '+ok.join(' ; '):''}${ko.length?'\nRefusées : '+ko.join(' ; '):''}`;
+    setStatus(base,ko.length>0);refreshStorage(true);
+    if(ok.length){const m=await refresh();if(m)setStatus(base+'\n'+m,ko.length>0);}
   });
   $('#pcClear').onclick=async()=>{
     for(const iso of Object.keys(S.postal))await dbPut('geo','pcnuts_'+iso,null);
     S.postal={};await save();show();setStatus('Tables code postal → NUTS retirées.');
+    const m=await refresh();if(m)setStatus('Tables code postal → NUTS retirées.\n'+m);
   };
   // tables conservées d'une session précédente
   dbGet('geo',INDEX).then(async idx=>{
     for(const iso of idx||[]){const t=await dbGet('geo','pcnuts_'+iso);if(t&&t.entries)S.postal[iso]=t;}
     show();
   });
-  show();
+  show();refreshStorage();
 }
