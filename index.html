@@ -46,7 +46,7 @@ tbody tr.sel td{background:rgba(31,94,255,.14)}
 #pop{position:absolute;max-width:290px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.2);z-index:2}
 #pop b{display:block;margin-bottom:2px}
 #legend{position:absolute;right:10px;top:10px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:11px;line-height:1.6}
-#legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px;border:1px solid #fff}
+#legend svg{vertical-align:-3px}
 .attrib{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.85);color:#333;font-size:10px;padding:1px 5px}
 .st-OK{color:var(--ok);font-weight:600}
 .st-NUTS_PROCHE{color:var(--warn);font-weight:600}
@@ -153,7 +153,7 @@ footer{padding:0 20px 20px;color:var(--mute);font-size:11px}
     <div id="mapwrap">
       <canvas id="map" tabindex="0" role="application" aria-label="Carte des adresses géocodées" aria-describedby="mapHelp"></canvas>
       <div class="mapbtns"><button id="zin" title="Zoom +" aria-label="Zoom avant">+</button><button id="zout" title="Zoom −" aria-label="Zoom arrière">−</button></div>
-      <div id="legend"><i style="background:#12805c"></i>OK (confiance haute ou moyenne)<br><i style="background:#ca8a04"></i>À vérifier (CP/ville, CP différent)<br><i style="background:#d97706"></i>NUTS proche<br><i style="background:#c0262d"></i>Pays incohérent / hors NUTS / échec<br><span class="muted">Cliquez un point ou une zone</span></div>
+      <div id="legend" role="group" aria-label="Légende des points : forme et couleur selon le statut"></div>
       <div id="pop" hidden></div>
       <div class="attrib" id="attrib"></div>
     </div>
@@ -505,6 +505,23 @@ const SAMPLE=[
  ['NatWest Group','MacLeod','Fiona','36 St Andrew Square','EH2 2YB','Edinburgh','UK']
 ];
 
+// --- Marqueurs de la carte : forme ET couleur selon le statut (la couleur seule ne suffit pas à tous les utilisateurs) ---
+// Les formes se distinguent au contour : cercle, triangle, losange, carré. La dernière entrée sert de valeur par défaut.
+const MARKERS=[
+  {statuts:['OK'],shape:'circle',color:'#12805c',label:'OK (confiance haute ou moyenne)'},
+  {statuts:['A_VERIFIER'],shape:'triangle',color:'#ca8a04',label:'À vérifier (CP/ville, CP différent)'},
+  {statuts:['NUTS_PROCHE'],shape:'diamond',color:'#d97706',label:'NUTS proche'},
+  {statuts:[],shape:'square',color:'#c0262d',label:'Pays incohérent / hors NUTS / échec'}];
+const markerStyle=statut=>MARKERS.find(m=>m.statuts.includes(statut))||MARKERS[MARKERS.length-1];
+// sommets (rapportés au rayon) des formes polygonales ; le cercle n'en a pas
+const MARKER_PTS={triangle:[[0,-1.35],[1.2,.9],[-1.2,.9]],diamond:[[0,-1.25],[1.25,0],[0,1.25],[-1.25,0]],square:[[-.9,-.9],[.9,-.9],[.9,.9],[-.9,.9]]};
+// pastille SVG de la légende (décorative : le libellé suit)
+function markerSvg(m,size=14,r=5){
+  const c=size/2,p=MARKER_PTS[m.shape];
+  const shape=p?`<polygon points="${p.map(([x,y])=>(c+x*r).toFixed(1)+','+(c+y*r).toFixed(1)).join(' ')}"`:`<circle cx="${c}" cy="${c}" r="${r}"`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">${shape} fill="${m.color}" stroke="#fff" stroke-width="1"/></svg>`;
+}
+
 // --- Clavier : actions de la carte et navigation dans une liste (pures, testées sous Node) ---
 // e = événement clavier (key, shiftKey, ctrlKey, altKey, metaKey) → action ou null si la touche n'est pas gérée
 function mapKeyAction(e){
@@ -534,7 +551,7 @@ function stepIndex(cur,n,dir){
   if(cur<0)return dir>0?0:n-1;
   return (cur+dir+n)%n;
 }
-if(typeof module!=='undefined'&&module.exports)module.exports={mapKeyAction,moveIndex,stepIndex,xmlUnesc,xmlEsc,attrs,colIdx,colName,zipOpen,zipText,readXlsx,readXlsxBook,firstVisible,mergeSheets,decodeText,parseCSV,crc32,zipBuild,buildXlsx,
+if(typeof module!=='undefined'&&module.exports)module.exports={MARKERS,markerStyle,MARKER_PTS,markerSvg,mapKeyAction,moveIndex,stepIndex,xmlUnesc,xmlEsc,attrs,colIdx,colName,zipOpen,zipText,readXlsx,readXlsxBook,firstVisible,mergeSheets,decodeText,parseCSV,crc32,zipBuild,buildXlsx,
   inRing,prepNuts,distRingKm,findNuts,CP_LEN,COUNTRY_ALIASES,isoOf,nuts0Of,CC_GROUP,ccOf,ccList,NUM_FIRST,streetOf,normCp,fixCp,cpMatch,niveauOf,decide,stripAbbr,
   RES,val,cc,csvCell,geocodeRow,applyResult,summarize,SAMPLE};   // utilisé par les tests Node (test/), sans effet dans le navigateur
 
@@ -826,7 +843,13 @@ const prefGet=k=>{try{return localStorage.getItem(PREF+k);}catch(e){return null;
 const prefSet=(k,v)=>{try{localStorage.setItem(PREF+k,v);}catch(e){}};
 function baseUI(){const b=$('#base').value;$('#lblKey').hidden=b!=='voyager';$('#lblUrl').hidden=b!=='custom';
   if(b==='voyager'&&!$('#cartoKey').value.trim())setStatus('CARTO exige une clé gratuite (carto.com/basemaps/apikey) : sans clé, les tuiles portent un filigrane.');}
-const ST_COL={OK:'#12805c',A_VERIFIER:'#ca8a04',NUTS_PROCHE:'#d97706'},COL_OTHER='#c0262d';
+// légende générée depuis la même définition que les points : formes et couleurs ne peuvent pas diverger
+$('#legend').innerHTML=MARKERS.map(m=>markerSvg(m)+' '+esc(m.label)).join('<br>')+'<br><span class="muted">Cliquez un point ou une zone</span>';
+function markerPath(x,y,rad,shape){
+  ctx.beginPath();const p=MARKER_PTS[shape];
+  if(!p){ctx.arc(x,y,rad,0,7);return;}
+  p.forEach(([px,py],i)=>{const X=x+px*rad,Y=y+py*rad;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});ctx.closePath();
+}
 const isNum=v=>typeof v==='number'&&isFinite(v);
 const merc=(lon,lat)=>{const sl=Math.sin(Math.max(-85,Math.min(85,lat))*Math.PI/180);return [(lon+180)/360,0.5-Math.log((1+sl)/(1-sl))/(4*Math.PI)];};
 const unmerc=(x,y)=>[x*360-180,180/Math.PI*Math.atan(Math.sinh(Math.PI*(1-2*y)))];
@@ -875,7 +898,7 @@ function paint(){
   for(const r of rows){if(!isNum(r.lat)||r===S.selRow)continue;dot(r,5.5,1.5);}
   if(S.selRow&&isNum(S.selRow.lat))dot(S.selRow,8,3);
   function dot(r,rad,lw){const m=merc(r.lon,r.lat),x=(m[0]-c[0])*s+W/2,y=(m[1]-c[1])*s+H/2;if(x<-10||y<-10||x>W+10||y>H+10)return;
-    ctx.beginPath();ctx.arc(x,y,rad,0,7);ctx.fillStyle=ST_COL[r.statut]||COL_OTHER;ctx.fill();ctx.lineWidth=lw;ctx.strokeStyle='#fff';ctx.stroke();}
+    const st=markerStyle(r.statut);markerPath(x,y,rad,st.shape);ctx.fillStyle=st.color;ctx.fill();ctx.lineWidth=lw;ctx.lineJoin='round';ctx.strokeStyle='#fff';ctx.stroke();}
   $('#attrib').textContent=[base.attr,feats?'NUTS © EuroGeographics':''].filter(Boolean).join(' · ');
   positionPop();
 }
