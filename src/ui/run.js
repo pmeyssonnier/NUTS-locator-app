@@ -60,6 +60,8 @@ export async function run(){
 }
 export function initRun(){
   $('#run').onclick=run;
-  $('#noGeo').onchange=e=>{$('#run').textContent=e.target.checked?'Déterminer le NUTS':'Géocoder';};
+  // le libellé suit la case, y compris quand le navigateur la restaure cochée à la réouverture de la page
+  const label=()=>{$('#run').textContent=$('#noGeo').checked?'Déterminer le NUTS':'Géocoder';};
+  $('#noGeo').onchange=label;label();addEventListener('pageshow',label);
   $('#stop').onclick=()=>{S.running=false;S.ctrl?.abort();};
 }
