@@ -10,6 +10,7 @@ import {initLayout} from './ui/layout.js';
 import {initSession} from './ui/session.js';
 import {initPostcodes} from './ui/postcodes.js';
 import {btns} from './ui/controls.js';
+import {VERSION, VERSION_DATE} from './version.js';
 import {runSelfTests} from './ui/selftests.js';
 
 // Point d'entrée : branche les modules entre eux (la carte et le tableau reçoivent leurs actions ici)
@@ -22,6 +23,7 @@ initExports();
 initLayout();
 initSession();
 initPostcodes();
+document.getElementById('ver').textContent=`NUTS Locator v${VERSION} (${VERSION_DATE}) ·`;
 
 buildMap();
 btns();
