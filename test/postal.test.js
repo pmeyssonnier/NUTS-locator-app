@@ -71,14 +71,13 @@ test('stripAbbr : retire les abréviations de type de voie',()=>{
 });
 
 test('decide : statut et confiance',()=>{
-  const D=q=>L.decide({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,cpNear:false,exact:true,...q});
+  const D=q=>L.decide({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,exact:true,...q});
   assert.deepEqual(D({}),{statut:'OK',confiance:'HAUTE',controle_manuel:'NON'});
   assert.deepEqual(D({niveau:'RUE'}),{statut:'OK',confiance:'MOYENNE',controle_manuel:'OUI'});
   assert.deepEqual(D({niveau:'INCONNU'}),{statut:'OK',confiance:'MOYENNE',controle_manuel:'OUI'});
   assert.equal(D({niveau:'VILLE_OU_PLUS'}).statut,'A_VERIFIER');
   assert.equal(D({niveau:'LOCALITE'}).confiance,'FAIBLE');
   assert.deepEqual(D({precise:false}),{statut:'A_VERIFIER',confiance:'FAIBLE',controle_manuel:'OUI'});
-  assert.equal(D({cpNear:true}).confiance,'MOYENNE');
   assert.equal(D({cpKo:true}).statut,'A_VERIFIER');
   assert.equal(D({exact:false}).statut,'NUTS_PROCHE');assert.equal(D({exact:false}).confiance,'MOYENNE');
   assert.deepEqual(D({paysKo:true}),{statut:'PAYS_INCOHERENT',confiance:'FAIBLE',controle_manuel:'OUI'});
@@ -97,7 +96,7 @@ test('stripLocality : retire le complément après une virgule, sans perdre le n
 });
 
 test('decide : adresse trouvée sans le complément (loose) → A_VERIFIER, confiance MOYENNE au plus',()=>{
-  const D=q=>L.decide({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,cpNear:false,exact:true,...q});
+  const D=q=>L.decide({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,exact:true,...q});
   assert.deepEqual(D({loose:true}),{statut:'A_VERIFIER',confiance:'MOYENNE',controle_manuel:'OUI'});    // même un bâtiment exact
   assert.deepEqual(D({loose:true,niveau:'RUE'}),{statut:'A_VERIFIER',confiance:'MOYENNE',controle_manuel:'OUI'});
   assert.equal(D({loose:true,paysKo:true}).statut,'PAYS_INCOHERENT');                                  // le pays prime

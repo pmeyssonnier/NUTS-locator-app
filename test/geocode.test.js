@@ -300,3 +300,42 @@ test('Jaguar Land Rover (export réel) : « Abbey Road, Whitley » trouvé sans 
   assert.equal(r.niveau_resultat,'RUE');assert.equal(r.NUTS3,'UKG33');assert.equal(r.lat,52.38845);   // la position de la rue est conservée
   assert.match(r.controle,/sans le complément d'adresse \(« Abbey Road »\)/);assert.match(r.controle,/quartier non confirmé/);
 });
+
+// ---------- Code postal voisin ----------
+// zones cohérentes avec le pays saisi (Bucarest, La Corogne) : sinon le contrôle du pays prendrait le pas
+const NX=L.prepNuts([['RO321',26.06,44.49],['ES111',-8.51,43.31]].map(([id,lon,lat])=>({type:'Feature',properties:{NUTS_ID:id,NAME_LATN:id},geometry:{type:'Polygon',coordinates:[sq(lon,lat,.2)]}})));
+const RO=(o={})=>G({iso:'RO',cc:'RO',lat:44.49,lon:26.06,postcode:'400018',cpIn:'400027',...o});
+const ES=(o={})=>G({iso:'ES',cc:'ES',lat:43.31,lon:-8.51,postcode:'15142',cpIn:'15143',...o});
+const applyX=g=>{const r={};L.RES.forEach(c=>r[c]='');L.applyResult(r,g,CFG,NX,{});return r;};
+
+test('applyResult : bâtiment exact + code postal voisin → HAUTE, la note reste visible',()=>{
+  const r=applyX(RO());                                                        // Banca Transilvania (export réel)
+  assert.equal(r.statut,'OK');assert.equal(r.confiance,'HAUTE');assert.equal(r.controle_manuel,'NON');
+  assert.match(r.controle,/CP voisin \(trouvé 400018, saisi 400027\)/);
+  assert.equal(applyX(ES()).confiance,'HAUTE');
+});
+
+test('applyResult : code postal voisin mais rue sans numéro → MOYENNE (le niveau compte, pas le code postal)',()=>{
+  const r=applyX(ES({rank:26,atype:'road'}));                                  // Inditex (export réel)
+  assert.equal(r.statut,'OK');assert.equal(r.confiance,'MOYENNE');assert.equal(r.controle_manuel,'OUI');
+  assert.equal(r.niveau_resultat,'RUE');assert.match(r.controle,/CP voisin/);
+});
+
+test('applyResult : le code postal voisin ne masque aucun autre doute',()=>{
+  const loose=applyX(RO({loose:true}));
+  assert.equal(loose.statut,'A_VERIFIER');assert.equal(loose.confiance,'MOYENNE');                  // complément ignoré
+  const ko=applyX(RO({postcode:'410018'}));
+  assert.equal(ko.statut,'A_VERIFIER');assert.equal(ko.confiance,'MOYENNE');                        // vrai écart de code postal
+  const vague=applyX(RO({prec:'VILLE',rank:16,atype:'city'}));
+  assert.equal(vague.confiance,'FAIBLE');                                                           // repli sur la ville
+  const km=1/(111.32*Math.cos(44.49*Math.PI/180));
+  const near=applyX(RO({lon:26.26+0.5*km}));                                                        // à 0,5 km du bord de la zone
+  assert.equal(near.statut,'NUTS_PROCHE');assert.equal(near.confiance,'MOYENNE');
+  const pays=applyX(RO({cc:'HU'}));
+  assert.equal(pays.statut,'PAYS_INCOHERENT');                                                      // le pays prime
+});
+
+test('applyResult : CP à 4 chiffres (BE) : pas de « voisin », donc inchangé',()=>{
+  const r=apply(G({postcode:'1040',cpIn:'1000'}));
+  assert.equal(r.statut,'A_VERIFIER');assert.doesNotMatch(r.controle,/CP voisin/);
+});

@@ -42,7 +42,7 @@ L'ordre des essais est **appris pays par pays** pendant la session : un essai qu
 | `PAYS_INCOHERENT` | Pays trouvé ou NUTS0 différent du pays saisi |
 | `HORS_NUTS`, `ECHEC_GEOCODAGE`, `ERREUR` | Pas de code NUTS exploitable |
 
-La **confiance** (`HAUTE`, `MOYENNE`, `FAIBLE`) mesure la précision de la localisation. `HAUTE` exige un bâtiment trouvé, un code postal identique et un point dans le contour. La colonne `controle_manuel` vaut `OUI` dès que la confiance n'est pas `HAUTE`.
+La **confiance** (`HAUTE`, `MOYENNE`, `FAIBLE`) mesure la précision de la localisation. `HAUTE` exige un bâtiment trouvé et un point dans le contour, avec un code postal identique ou voisin (seuls les 2 derniers caractères diffèrent : avec un bâtiment exact, c'est le code postal d'OpenStreetMap qui diffère, et la note « CP voisin » reste visible). Une rue sans numéro, une zone proche ou un complément d'adresse ignoré donnent au mieux `MOYENNE`. La colonne `controle_manuel` vaut `OUI` dès que la confiance n'est pas `HAUTE`.
 
 ## Utilisation sur téléphone et tablette
 

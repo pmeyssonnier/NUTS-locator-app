@@ -28,12 +28,11 @@ export function runSelfTests(){
   T(findNuts(N,4.45+2.9*km,50.85,3)?.km<3,'2,9 km : dans la tolérance de 3 km');
   T(findNuts(N,4.45+3.1*km,50.85,3)===null,'3,1 km : hors tolérance de 3 km');
   T(findNuts(N,4.45+0.5*km,50.85,0)===null,'tolérance 0 : aucun rattachement forcé');
-  const D=q=>decide(Object.assign({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,cpNear:false,exact:true},q));
+  const D=q=>decide(Object.assign({precise:true,niveau:'BATIMENT',paysKo:false,cpKo:false,exact:true},q));
   T(D({}).statut==='OK'&&D({}).confiance==='HAUTE'&&D({}).controle_manuel==='NON','bâtiment exact : OK/HAUTE');
   T(D({niveau:'RUE'}).statut==='OK'&&D({niveau:'RUE'}).confiance==='MOYENNE','rue sans numéro : OK/MOYENNE');
   T(D({niveau:'VILLE_OU_PLUS'}).statut==='A_VERIFIER','réponse de niveau ville : A_VERIFIER');
   T(D({precise:false}).statut==='A_VERIFIER'&&D({precise:false}).confiance==='FAIBLE','repli CP/ville : A_VERIFIER/FAIBLE');
-  T(D({cpNear:true}).confiance==='MOYENNE'&&D({cpNear:true}).controle_manuel==='OUI','CP voisin : contrôle manuel');
   T(D({cpKo:true}).statut==='A_VERIFIER','CP différent : A_VERIFIER');T(D({paysKo:true}).statut==='PAYS_INCOHERENT','pays incohérent');
   T(D({exact:false}).statut==='NUTS_PROCHE','hors contour : NUTS_PROCHE');
   const ko=out.filter(x=>x.startsWith('✘')).length;
