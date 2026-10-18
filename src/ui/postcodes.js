@@ -1,5 +1,5 @@
 import {decodeText} from '../lib/csv.js';
-import {parsePostcodeTable} from '../lib/postcodes.js';
+import {parsePostcodeTables} from '../lib/postcodes.js';
 import {zipOpen, zipText} from '../lib/zip.js';
 import {$, setStatus} from './dom.js';
 import {S} from './state.js';
@@ -32,13 +32,14 @@ export function initPostcodes(){
     const ok=[],ko=[];
     for(const f of [...e.target.files]){
       try{for(const {name,text} of await readTables(f)){
-        const t=parsePostcodeTable(text,name);
-        S.postal[t.iso]=t;await dbPut('geo','pcnuts_'+t.iso,t);
-        ok.push(`${t.iso} : ${t.count.toLocaleString('fr-BE')} codes postaux${t.nutsVersion?` (NUTS ${t.nutsVersion})`:' (millésime NUTS inconnu : nom de fichier non reconnu, contrôle non concluant)'}`);}
-      }catch(err){ko.push(f.name+' ('+err.message+')');}
+        setStatus(`Analyse de ${name}… (un fichier tous pays compte plus de 800 000 lignes : quelques secondes)`);await new Promise(r=>setTimeout(r,20));
+        for(const t of parsePostcodeTables(text,name)){
+          S.postal[t.iso]=t;await dbPut('geo','pcnuts_'+t.iso,t);
+          ok.push(`${t.iso} : ${t.count.toLocaleString('fr-BE')}${t.nutsVersion?'':' (millésime NUTS inconnu : nom de fichier non reconnu, contrôle non concluant)'}`);}
+      }}catch(err){ko.push(f.name+' ('+err.message+')');}
     }
     await save();e.target.value='';show();
-    setStatus(`Tables importées : ${ok.length}${ok.length?' — '+ok.join(' ; '):''}${ko.length?'\nRefusées : '+ko.join(' ; '):''}`,ko.length>0);
+    setStatus(`Tables importées : ${ok.length} pays${ok.length?' — '+ok.join(' ; '):''}${ko.length?'\nRefusées : '+ko.join(' ; '):''}`,ko.length>0);
   });
   $('#pcClear').onclick=async()=>{
     for(const iso of Object.keys(S.postal))await dbPut('geo','pcnuts_'+iso,null);

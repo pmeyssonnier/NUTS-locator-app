@@ -1,4 +1,4 @@
-import {findNuts} from './geo.js';
+import {distToNutsKm, findNuts} from './geo.js';
 import {compareCpNuts, lookupPostcode} from './postcodes.js';
 import {cc, ccList, ccOf, cpMatch, decide, fixCp, isoOf, niveauOf, normCp, nuts0Of, streetOf, stripAbbr, stripLocality} from './postal.js';
 
@@ -50,6 +50,7 @@ export async function geocodeRow(r,m,cfg,geocode){
   }
   return fallback||{fail:true,iso,notes};
 }
+const LIMITROPHE_KM=10;            // en deçà, un désaccord avec la table code postal → NUTS 3 est attribué au centroïde, pas à une erreur
 export function applyResult(r,g,cfg,nuts,names,postal){
   RES.forEach(c=>r[c]='');
   const notes=[...(g.notes||[])];
@@ -85,9 +86,12 @@ export function applyResult(r,g,cfg,nuts,names,postal){
   const table=postal?.[g.iso];
   if(table){
     const cand=lookupPostcode(table,g.cpIn,g.iso)||lookupPostcode(table,g.postcode,g.iso);
-    const acc=compareCpNuts(cand,r.NUTS3,table.nutsVersion,r.NUTS_version);
+    let acc=compareCpNuts(cand,r.NUTS3,table.nutsVersion,r.NUTS_version),lim=0;
+    // Eurostat attribue le code postal au NUTS 3 de son centroïde : un point proche de cette zone n'est pas une anomalie
+    if(acc==='NON'||acc==='MEME_NUTS2'){lim=Math.min(...cand.map(c=>distToNutsKm(nuts,c,g.lon,g.lat)));if(lim<=LIMITROPHE_KM)acc='LIMITROPHE';}
     r.controle_cp_nuts=acc;r.NUTS3_codepostal=(cand||[]).join('|');
     if(acc==='OUI')notes.push('NUTS 3 confirmé par la table Eurostat des codes postaux');
+    else if(acc==='LIMITROPHE')notes.push(`NUTS 3 du point (${r.NUTS3}) ≠ NUTS 3 du code postal (${cand.join('|')}) mais à ${lim} km de celui-ci : code postal à cheval sur la limite (Eurostat retient le centroïde)`);
     else if(acc==='NON'||acc==='MEME_NUTS2'){cpNutsKo=true;notes.push(`NUTS 3 du point (${r.NUTS3}) ≠ NUTS 3 du code postal (${cand.join('|')})${acc==='MEME_NUTS2'?', même NUTS 2':''} : à vérifier`);}
     else if(acc==='VERSION_DIFFERENTE')notes.push(`NUTS 3 du point (${r.NUTS3}, NUTS ${r.NUTS_version}) ≠ code postal (${cand.join('|')}, NUTS ${table.nutsVersion||'?'}) : millésimes différents, non concluant`);
     else notes.push('code postal absent de la table Eurostat');

@@ -341,7 +341,7 @@ test('applyResult : CP à 4 chiffres (BE) : pas de « voisin », donc inchangé'
 });
 
 // ---------- Contrôle croisé avec la table Eurostat des codes postaux (prototype) ----------
-const tbl=(entries,nutsVersion='2024')=>({iso:'BE',nutsVersion,source:'t.csv',entries,count:Object.keys(entries).length,multi:0,skipped:0});
+const tbl=(e,nutsVersion='2024')=>{const entries=Object.fromEntries(Object.entries(e).map(([k,v])=>[k,[].concat(v).join(',')]));return {iso:'BE',nutsVersion,source:'t.csv',entries,len:4,count:Object.keys(entries).length,multi:0,skipped:0};};
 const applyP=(g,postal)=>{const r={};L.RES.forEach(c=>r[c]='');L.applyResult(r,g,CFG,NUTS,NAMES,postal);return r;};
 
 test('RES : les deux colonnes du contrôle croisé existent, vides sans table',()=>{
@@ -361,6 +361,16 @@ test('contrôle croisé : désaccord à millésime identique → A_VERIFIER / MO
   assert.equal(r.controle_cp_nuts,'NON');assert.equal(r.statut,'A_VERIFIER');assert.equal(r.confiance,'MOYENNE');assert.equal(r.controle_manuel,'OUI');
   assert.match(r.controle,/NUTS 3 du point \(BE100\) ≠ NUTS 3 du code postal \(BE242\) : à vérifier/);
   assert.equal(r.NUTS3,'BE100');assert.equal(r.NUTS3_codepostal,'BE242');           // les deux valeurs restent visibles
+});
+
+test('contrôle croisé : point proche de la zone du code postal (≤ 10 km) → limitrophe, note seulement',()=>{
+  const feat=(id,lon)=>({type:'Feature',properties:{NUTS_ID:id,NAME_LATN:id},geometry:{type:'Polygon',coordinates:[sq(lon,50.85,.1)]}});
+  const N2=L.prepNuts([feat('BE100',4.35),feat('BE242',4.55),feat('BE211',5.5)]);           // BE242 à ~7 km du point, BE211 à ~60 km
+  const ap=(id)=>{const r={};L.RES.forEach(c=>r[c]='');L.applyResult(r,G(),CFG,N2,NAMES,{BE:tbl({'1000':[id]})});return r;};
+  const proche=ap('BE242');
+  assert.equal(proche.controle_cp_nuts,'LIMITROPHE');assert.equal(proche.statut,'OK');assert.equal(proche.confiance,'HAUTE');
+  assert.match(proche.controle,/à \d+(\.\d+)? km de celui-ci : code postal à cheval sur la limite/);
+  assert.equal(ap('BE211').controle_cp_nuts,'NON');assert.equal(ap('BE211').statut,'A_VERIFIER');   // trop loin : toujours signalé
 });
 
 test('contrôle croisé : NUTS 3 voisin de la même région → A_VERIFIER, mention « même NUTS 2 »',()=>{
