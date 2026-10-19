@@ -20,7 +20,7 @@ Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le cod
 3. **Résultats** : filtrez, triez, exportez. « Exporter les lignes à contrôler » isole les lignes dont le statut n'est pas `OK` ou la confiance pas `HAUTE`.
 4. **Carte** : choisissez le niveau de contours NUTS et le fond de carte.
 
-**Classeur à plusieurs feuilles** : si le fichier `.xlsx` contient plusieurs feuilles, une liste « Feuille » apparaît. La première feuille visible est chargée par défaut ; vous pouvez choisir une autre feuille (les feuilles masquées sont signalées) ou « Toutes les feuilles », qui fusionne les feuilles visibles : les colonnes sont alignées par nom d'en-tête, et une colonne « Feuille » indique l'origine de chaque ligne. Les feuilles vides ou réduites à un en-tête sont ignorées.
+**Classeur à plusieurs feuilles** : si le fichier `.xlsx` contient plusieurs feuilles, un encadré bleu « Ce classeur contient N feuilles : choisissez celle à traiter » apparaît sous le fichier, avec la liste des feuilles. La première feuille visible est chargée par défaut ; vous pouvez choisir une autre feuille (les feuilles masquées sont signalées) ou « Toutes les feuilles », qui fusionne les feuilles visibles : les colonnes sont alignées par nom d'en-tête, et une colonne « Feuille » indique l'origine de chaque ligne. Les feuilles vides ou réduites à un en-tête sont ignorées.
 
 Le fichier d'exemple se trouve dans [`exemples/exemple_societes_europe.xlsx`](exemples/exemple_societes_europe.xlsx) (27 sociétés européennes, contacts fictifs). Il contient les colonnes `Société`, `Nom`, `Prénom`, `Adresse`, `Code postal`, `Ville`, `Pays`. Le pays peut être un code ISO (`BE`, `UK`, `EL`) ou un nom (« Belgique », « Germany »).
 

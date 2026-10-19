@@ -4,7 +4,7 @@ import {SAMPLE} from '../lib/sample.js';
 import {esc, norm} from '../lib/util.js';
 import {buildXlsx, firstVisible, mergeSheets, readXlsxBook} from '../lib/xlsx.js';
 import {btns} from './controls.js';
-import {$, download, setStatus} from './dom.js';
+import {$, announce, download, setStatus} from './dom.js';
 import {updateSummaries} from './folds.js';
 import {render} from './render.js';
 import {FIELDS, S} from './state.js';
@@ -43,6 +43,7 @@ export function setBook(book,name){
   const sel=$('#sheet'),multi=!!book&&book.sheets.length>1;
   $('#lblSheet').hidden=!multi;sel.innerHTML='';
   if(!multi)return;
+  $('#sheetTxt').textContent=`Ce classeur contient ${book.sheets.length} feuilles : choisissez celle à traiter`;
   const vis=book.sheets.filter(s=>!s.hidden);
   sel.innerHTML=book.sheets.map(s=>`<option value="${s.i}">${esc(s.name||'Feuille '+(s.i+1))}${s.hidden?' (masquée)':''}</option>`).join('')
     +(vis.length>1?'<option value="all">Toutes les feuilles (colonne « Feuille » ajoutée)</option>':'');
@@ -61,6 +62,7 @@ async function loadSheet(){
       label=n>1?`${S.bookName} — feuille « ${s.name} »`:S.bookName;what=`feuille « ${s.name} » chargée`;
     }
     loadGrid(grid,label);
+    if(n>1&&S.label===label){$('#loaded').textContent+=` — ${n} feuilles : changez-en avec la liste ci-dessus.`;announce(`Classeur de ${n} feuilles : ${what}. Choisissez la feuille à traiter dans la liste.`);}
     if(n>1&&S.label===label)setStatus(`Classeur de ${n} feuilles : ${what}. Changez de feuille avec la liste « Feuille ». Vérifiez le mappage des colonnes puis cliquez sur « Géocoder ».`);
   }catch(err){setStatus('Erreur de lecture : '+err.message,true);}
 }

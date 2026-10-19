@@ -20,10 +20,10 @@
     <h2 id="h-data">1. Données</h2>
     <div class="row">
       <label>Fichier (.xlsx, .csv)<input type="file" id="file" accept=".xlsx,.csv,.txt"></label>
-      <label id="lblSheet" hidden>Feuille<select id="sheet" style="min-width:220px"></select></label>
       <button id="sample">Charger l'exemple</button>
       <button id="sampleDl">Télécharger l'exemple (.xlsx)</button>
     </div>
+    <label id="lblSheet" class="sheetpick" hidden><span id="sheetTxt">Feuille</span><select id="sheet"></select></label>
     <div id="loaded" class="muted" style="margin-top:8px">Aucun fichier chargé.</div>
     <details class="fold" id="dMan"><summary>Saisir une adresse manuellement</summary>
       <form id="manForm" autocomplete="off">
