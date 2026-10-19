@@ -25,6 +25,22 @@
       <button id="sampleDl">Télécharger l'exemple (.xlsx)</button>
     </div>
     <div id="loaded" class="muted" style="margin-top:8px">Aucun fichier chargé.</div>
+    <details class="fold" id="dMan"><summary>Saisir une adresse manuellement</summary>
+      <form id="manForm" autocomplete="off">
+        <div class="row" style="margin-top:6px">
+          <label class="wide">Adresse (rue)<input type="text" id="man_adr" placeholder="Rue de la Loi" enterkeyhint="next"></label>
+          <label>Numéro<input type="text" id="man_num" placeholder="200" style="min-width:70px;width:90px" enterkeyhint="next"></label>
+          <label>Code postal<input type="text" id="man_cp" placeholder="1049" style="min-width:90px;width:110px" enterkeyhint="next"></label>
+          <label class="wide">Ville<input type="text" id="man_ville" placeholder="Bruxelles" enterkeyhint="next"></label>
+          <label>Pays<input type="text" id="man_pays" placeholder="pays par défaut" style="min-width:90px;width:130px" enterkeyhint="go"></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="manGo" type="submit">Ajouter et lancer</button>
+          <button id="manAdd" type="button" title="Ajoute l'adresse à la liste sans lancer le traitement (pour en saisir plusieurs, puis cliquer sur « Géocoder »)">Ajouter sans lancer</button>
+        </div>
+        <p class="notice" id="manMsg" role="status"></p>
+      </form>
+    </details>
     <div id="restoreBox" class="row" style="margin-top:8px" hidden>
       <span id="restoreTxt" class="muted"></span>
       <button id="restore">Restaurer la session</button>

@@ -21,27 +21,28 @@ export async function reapplyPostal(){
   return {done:rows.length,stale};
 }
 // Mode sans géocodage : NUTS 3 déduit du code postal par les tables Eurostat, sans position ni réseau (hors libellés)
-async function runNoGeo(m){
+async function runNoGeo(m,only){
   if(!m.cp){setStatus('Indiquez la colonne Code postal.',true);return;}
   if(!Object.keys(S.postal).length){setStatus('Importez d\'abord les tables Eurostat « code postal → NUTS 3 » (section 2).',true);return;}
   S.running=true;btns();
   let names=S.names;
   try{await loadNames();names=S.names;}catch(e){names={};setStatus('Libellés Eurostat indisponibles (les codes NUTS restent valides) : '+e.message,true);}
   const cfg={defPays:$('#defPays').value},rowsRef=S.rows;
-  const todo=S.rows.filter(r=>!$('#onlyMissing').checked||r.statut!=='OK');
+  const todo=only||S.rows.filter(r=>!$('#onlyMissing').checked||r.statut!=='OK');
   for(const r of todo){if(S.rows!==rowsRef)break;delete r.__g;resolveByPostcode(r,m,cfg,names,S.postal);}
   $('#bar').style.width='100%';
   S.running=false;btns();await saveSession();
   const msg=`Terminé (sans géocodage, ${todo.length} ligne(s)). `+summary();
   setStatus(msg);announce(msg.replace(/\n/g,'. '));render();
 }
-export async function run(){
-  const m=getMap();if($('#noGeo').checked)return runNoGeo(m);if(!m.adr&&!m.cp&&!m.ville){setStatus('Indiquez au moins la colonne Adresse, Code postal ou Ville.',true);return;}
+// only (facultatif) : ne traiter que ces lignes (saisie manuelle) ; sans lui, toutes les lignes ou seulement celles qui ne sont pas OK
+export async function run(only){
+  const m=getMap();if($('#noGeo').checked)return runNoGeo(m,only);if(!m.adr&&!m.cp&&!m.ville){setStatus('Indiquez au moins la colonne Adresse, Code postal ou Ville.',true);return;}
   const cfg={nomUrl:$('#nomUrl').value,email:$('#email').value.trim(),defPays:$('#defPays').value,maxKm:Math.max(0,+$('#maxKm').value||0),uk:ukOn(),memory:S.strategy};
   S.ctrl=new AbortController();cfg.signal=S.ctrl.signal;
   S.running=true;btns();
   try{await loadNuts($('#res').value);S.nuts=S.levels[lkey(3,$('#res').value)];}catch(e){setStatus('Impossible de charger les contours NUTS : '+e.message,true);S.running=false;btns();return;}
-  const todo=S.rows.filter(r=>!$('#onlyMissing').checked||r.statut!=='OK'),rowsRef=S.rows;
+  const todo=only||S.rows.filter(r=>!$('#onlyMissing').checked||r.statut!=='OK'),rowsRef=S.rows;
   let i=0,bad=0,halt=false;const t0=Date.now();
   for(const r of todo){
     if(!S.running||S.rows!==rowsRef)break;i++;
@@ -59,7 +60,7 @@ export async function run(){
   render();await ensureLevel();fit();
 }
 export function initRun(){
-  $('#run').onclick=run;
+  $('#run').onclick=()=>run();
   // le libellé suit la case, y compris quand le navigateur la restaure cochée à la réouverture de la page
   $('#noGeo').checked=false;
   const label=()=>{$('#run').textContent=$('#noGeo').checked?'Déterminer le NUTS':'Géocoder';};

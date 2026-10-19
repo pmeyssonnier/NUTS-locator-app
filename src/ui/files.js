@@ -15,6 +15,16 @@ export function buildMap(){
   for(const [k,,re] of FIELDS){const h=S.headers.find(h=>re.test(norm(h)));if(h)$('#m_'+k).value=h;}
   updateSummaries();
 }
+const MANUAL='Saisie manuelle',MANUAL_HEAD=['Adresse','Numéro','Code postal','Ville','Pays'];
+// Saisie manuelle : ajoute une ligne à la liste « Saisie manuelle » (la crée si besoin) et la renvoie
+export function addManualRow(cells){
+  if(S.label!==MANUAL||!S.rows.length||S.headers.join('|')!==MANUAL_HEAD.join('|')){loadGrid([MANUAL_HEAD,cells],MANUAL);return S.rows[0]||null;}
+  const o={};S.headers.forEach((h,i)=>o[h]=String(cells[i]??'').trim());RES.forEach(c=>o[c]='');o.__i=S.rows.length;S.rows.push(o);
+  $('#loaded').textContent=`${MANUAL} : ${S.rows.length} ligne(s), ${S.headers.length} colonnes.`;
+  buildCols();render();btns();
+  return o;
+}
+export const isManualList=()=>S.label===MANUAL&&S.rows.length>0;
 function loadGrid(grid,label){
   if(S.running){setStatus('Géocodage en cours : arrêtez-le avant de charger un autre fichier.',true);return;}
   grid=grid.filter(r=>r&&r.some(c=>String(c).trim()!==''));
