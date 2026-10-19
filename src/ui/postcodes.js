@@ -2,6 +2,7 @@ import {decodeText} from '../lib/csv.js';
 import {parsePostcodeTables} from '../lib/postcodes.js';
 import {zipOpen, zipText} from '../lib/zip.js';
 import {$, setStatus} from './dom.js';
+import {updateSummaries} from './folds.js';
 import {render} from './render.js';
 import {reapplyPostal} from './run.js';
 import {refreshStorage} from './storeinfo.js';
@@ -27,7 +28,7 @@ function show(){
     d.addEventListener('toggle',()=>{prefSet('pcOpen',d.open?'1':'0');s.textContent=s.textContent.replace(/pour (masquer|afficher)/,'pour '+(d.open?'masquer':'afficher'));});
     box.append(d);
   }
-  $('#pcClear').hidden=!t.length;
+  $('#pcClear').hidden=!t.length;updateSummaries();
 }
 // fichiers texte à analyser : le .csv, ou les .csv/.txt d'une archive .zip
 async function readTables(file){

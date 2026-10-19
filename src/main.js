@@ -9,6 +9,8 @@ import {initExports} from './ui/exports.js';
 import {initLayout} from './ui/layout.js';
 import {initSession} from './ui/session.js';
 import {initPostcodes} from './ui/postcodes.js';
+import {initFolds} from './ui/folds.js';
+import {initManual} from './ui/manual.js';
 import {btns} from './ui/controls.js';
 import {VERSION, VERSION_DATE} from './version.js';
 import {runSelfTests} from './ui/selftests.js';
@@ -23,6 +25,8 @@ initExports();
 initLayout();
 initSession();
 initPostcodes();
+initFolds();
+initManual();
 document.getElementById('ver').textContent=`NUTS Locator v${VERSION} (${VERSION_DATE}) ·`;
 document.getElementById('verTop').textContent=`v${VERSION}`;      // aussi en haut de page : sur mobile le pied de page est tout en bas
 

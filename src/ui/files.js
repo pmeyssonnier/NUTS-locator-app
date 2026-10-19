@@ -5,6 +5,7 @@ import {esc, norm} from '../lib/util.js';
 import {buildXlsx, firstVisible, mergeSheets, readXlsxBook} from '../lib/xlsx.js';
 import {btns} from './controls.js';
 import {$, download, setStatus} from './dom.js';
+import {updateSummaries} from './folds.js';
 import {render} from './render.js';
 import {FIELDS, S} from './state.js';
 import {buildCols} from './table.js';
@@ -12,7 +13,18 @@ import {buildCols} from './table.js';
 export function buildMap(){
   $('#mapBox').innerHTML=FIELDS.map(([k,l])=>`<label>${l}<select id="m_${k}"><option value="">—</option>${S.headers.map(h=>`<option>${esc(h)}</option>`).join('')}</select></label>`).join('');
   for(const [k,,re] of FIELDS){const h=S.headers.find(h=>re.test(norm(h)));if(h)$('#m_'+k).value=h;}
+  updateSummaries();
 }
+const MANUAL='Saisie manuelle',MANUAL_HEAD=['Adresse','Numéro','Code postal','Ville','Pays'];
+// Saisie manuelle : ajoute une ligne à la liste « Saisie manuelle » (la crée si besoin) et la renvoie
+export function addManualRow(cells){
+  if(S.label!==MANUAL||!S.rows.length||S.headers.join('|')!==MANUAL_HEAD.join('|')){loadGrid([MANUAL_HEAD,cells],MANUAL);return S.rows[0]||null;}
+  const o={};S.headers.forEach((h,i)=>o[h]=String(cells[i]??'').trim());RES.forEach(c=>o[c]='');o.__i=S.rows.length;S.rows.push(o);
+  $('#loaded').textContent=`${MANUAL} : ${S.rows.length} ligne(s), ${S.headers.length} colonnes.`;
+  buildCols();render();btns();
+  return o;
+}
+export const isManualList=()=>S.label===MANUAL&&S.rows.length>0;
 function loadGrid(grid,label){
   if(S.running){setStatus('Géocodage en cours : arrêtez-le avant de charger un autre fichier.',true);return;}
   grid=grid.filter(r=>r&&r.some(c=>String(c).trim()!==''));

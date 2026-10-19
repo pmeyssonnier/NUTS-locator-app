@@ -15,8 +15,8 @@ Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le cod
 - **En ligne** : la version publiée sur GitHub Pages (fichiers statiques, rien à configurer).
 - **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez http://localhost:8000. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
 
-1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ».
-2. **Colonnes & géocodage** : vérifiez le mappage (Adresse, Numéro, Code postal, Ville, Pays), renseignez votre e-mail (politique Nominatim), puis cliquez sur « Géocoder ».
+1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ». Pour une ou quelques adresses, ouvrez « Saisir une adresse manuellement » : « Ajouter et lancer » (ou Entrée) ajoute l'adresse à la liste « Saisie manuelle » et la traite aussitôt (géocodage ou mode sans géocodage selon la case cochée), puis l'affiche sur la carte ; « Ajouter sans lancer » permet d'en saisir plusieurs avant de cliquer sur « Géocoder ». Le pays peut rester vide (pays par défaut des réglages). Si un fichier est déjà chargé, une confirmation est demandée avant de le remplacer.
+2. **Colonnes & géocodage** : les colonnes sont reconnues automatiquement (le résumé les affiche) ; cliquez sur « Géocoder ». Les sections « Colonnes », « Réglages » (e-mail pour la politique Nominatim, pays par défaut, précision des contours, Royaume-Uni, serveur), « Imports hors ligne » (contours, tables Eurostat) et « Confidentialité et limites » sont repliées pour tenir sur un écran de téléphone ; un clic sur leur titre les ouvre. La section « Colonnes » s'ouvre d'elle-même quand aucune colonne n'est reconnue.
 3. **Résultats** : filtrez, triez, exportez. « Exporter les lignes à contrôler » isole les lignes dont le statut n'est pas `OK` ou la confiance pas `HAUTE`.
 4. **Carte** : choisissez le niveau de contours NUTS et le fond de carte.
 

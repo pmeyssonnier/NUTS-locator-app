@@ -1,6 +1,7 @@
 import {btns} from './controls.js';
 import {$, setStatus} from './dom.js';
 import {buildMap, setBook} from './files.js';
+import {updateSummaries} from './folds.js';
 import {ensureLevel, fit} from './map.js';
 import {render} from './render.js';
 import {getMap, S, summary} from './state.js';
@@ -22,7 +23,7 @@ async function restoreSession(s){
   if(o.defPays!=null)$('#defPays').value=o.defPays;
   if(['01M','03M','10M'].includes(o.res))$('#res').value=o.res;
   $('#withUK').checked=!!o.withUK;if(o.maxKm!=null)$('#maxKm').value=o.maxKm;$('#onlyMissing').checked=!!o.onlyMissing;
-  buildCols();
+  buildCols();updateSummaries();
   $('#loaded').textContent=`${s.label||'Session restaurée'} : ${S.rows.length} lignes, ${S.headers.length} colonnes.`;
   render();btns();setStatus('Session restaurée.\n'+summary());
   document.dispatchEvent(new Event('nuts:restored'));      // les tables importées sont alors appliquées aux lignes restaurées (voir ui/postcodes.js)
