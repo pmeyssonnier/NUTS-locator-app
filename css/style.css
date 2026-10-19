@@ -21,6 +21,8 @@ button:disabled{opacity:.5;cursor:default}
 #status{margin-top:6px;font-size:12px;color:var(--mute);white-space:pre-wrap}
 #status.err{color:var(--err)}
 details summary{cursor:pointer;font-size:13px}
+.sheetpick{display:block;margin-top:10px;border:2px solid var(--acc);border-radius:10px;padding:10px 12px;background:var(--card);color:var(--ink);font-weight:600}
+.sheetpick select{width:100%;margin-top:6px}
 .fold{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:0 12px}
 .fold>summary{padding:10px 0;font-weight:600}
 .fold[open]>summary{border-bottom:1px solid var(--line);margin-bottom:4px}
