@@ -6,7 +6,7 @@ import {allCols, S, view} from './state.js';
 
 const stampNow=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
 function exportRows(rows,cols,sheet,prefix){
-  const cpCol=$('#m_cp').value,txt=new Set([cpCol,'cp_trouve','NUTS0','NUTS1','NUTS2','NUTS3']);
+  const cpCol=$('#m_cp').value,txt=new Set([cpCol,'cp_trouve','NUTS0','NUTS1','NUTS2','NUTS3','TVA_VIES',...S.headers.filter(h=>/tva|vat|btw|ust.?id|partita.?iva/i.test(h))]);
   const num=(c,v)=>!txt.has(c)&&S.headers.includes(c)&&typeof v==='string'&&/^-?(0|[1-9]\d{0,14})(\.\d+)?$/.test(v)?+v:v;
   const stamp=new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
   download(buildXlsx(cols,rows.map(r=>cols.map(c=>num(c,r[c]))),sheet),`${prefix}_${stamp}.xlsx`);
