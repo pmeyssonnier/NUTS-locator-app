@@ -142,6 +142,20 @@ Avant tout appel réseau, le format national du numéro est vérifié (`FORMAT_I
 | Numéros de TVA | 20 | VALIDE 1 (− 0,1 à − 0,3 par incohérence nom / adresse) · INVALIDE / FORMAT_INVALIDE 0 · indisponible / hors VIES ignoré |
 | Complétude des adresses | 15 | part des colonnes adresse, code postal, ville, pays renseignées |
 
+### Relais VIES (Cloudflare Worker)
+
+L'API VIES n'envoie pas d'en-têtes CORS : un navigateur ne peut pas l'appeler directement depuis GitHub Pages. Le dossier `worker/` contient un relais gratuit (≈ 40 lignes, sans journal ni stockage) qui transmet la requête à VIES et ajoute les en-têtes CORS pour les seules origines listées dans `ALLOWED_ORIGINS`.
+
+Déploiement (depuis un poste avec Node ; compte Cloudflare gratuit) :
+```
+cd worker
+npx wrangler login
+npx wrangler deploy
+```
+Wrangler affiche l'adresse du Worker (`https://nuts-vies-proxy.<compte>.workers.dev`). Collez-la dans le champ « Relais VIES » de la section 3 (mémorisé dans le navigateur). Pour des essais locaux, ajoutez `http://localhost:8000` à `ALLOWED_ORIGINS` dans `worker/wrangler.toml`. Contrôle : `node scripts/check-vies.mjs https://nuts-vies-proxy.<compte>.workers.dev`.
+
+Les numéros de TVA transitent alors par votre Worker avant d'atteindre la Commission européenne.
+
 `node scripts/check-vies.mjs` contrôle l'API réelle (numéros publics connus, en-têtes CORS) depuis un poste connecté.
 
 ## Statut et confiance

@@ -1,9 +1,22 @@
 // Vérification VIES indépendante du géocodage (interface). Logique réseau dans lib/vies.js.
-import {checkVat, parseVat} from '../lib/vies.js';
-export {checkVat, parseVat};
+import {checkVat as check, parseVat, VIES_ENDPOINT} from '../lib/vies.js';
+import {prefGet, prefSet} from './storage.js';
+export {parseVat};
+// URL du relais (Cloudflare Worker) si renseignée, sinon appel direct à VIES (bloqué par CORS dans la plupart des navigateurs)
+export const viesEndpoint = () => (prefGet('viesProxy') || '').trim() || VIES_ENDPOINT;
+export const checkVat = raw => check(raw, fetch, viesEndpoint());
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
 export function initVies() {
+  const proxy = document.getElementById('vatProxy');
+  if (proxy) {
+    proxy.value = prefGet('viesProxy') || '';
+    proxy.addEventListener('change', () => {
+      const v = proxy.value.trim();
+      if (v && !/^https:\/\/[^\s]+$/.test(v) && !/^http:\/\/localhost/.test(v)) { proxy.setCustomValidity('URL https:// attendue'); proxy.reportValidity(); return; }
+      proxy.setCustomValidity(''); prefSet('viesProxy', v);
+    });
+  }
   const input = document.getElementById('vatInput');
   const button = document.getElementById('vatCheck');
   const stop = document.getElementById('vatStop');

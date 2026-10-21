@@ -62,3 +62,9 @@ test('compareName / compareAddressParts', () => {
   assert.equal(compareAddressParts([], off), 'NON_DISPONIBLE');
   assert.equal(compareAddressParts(['x'], ''), 'NON_DISPONIBLE');
 });
+
+test('checkVat : point d\'accès personnalisé (relais)', async () => {
+  let url;
+  await checkVat('BE0123456789', async u => { url = u; return {ok: true, status: 200, json: async () => ({valid: true})}; }, 'https://relay.example/v');
+  assert.equal(url, 'https://relay.example/v');
+});

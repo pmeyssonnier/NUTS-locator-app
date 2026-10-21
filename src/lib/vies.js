@@ -20,7 +20,7 @@ export function parseVat(raw) {
   return {countryCode: match[1] === 'GR' ? 'EL' : match[1], vatNumber: match[2], input: clean};
 }
 
-export async function checkVat(raw, fetcher = fetch) {
+export async function checkVat(raw, fetcher = fetch, endpoint = VIES_ENDPOINT) {
   const parsed = parseVat(raw);
   if (!parsed) return {input: raw, status: 'FORMAT_INVALIDE', detail: 'préfixe pays (2 lettres) + numéro attendus'};
   if (parsed.countryCode === 'GB') return {input: raw, status: 'HORS_VIES', detail: 'GB hors VIES ; utiliser XI pour les cas éligibles en Irlande du Nord'};
@@ -28,7 +28,7 @@ export async function checkVat(raw, fetcher = fetch) {
   if (!fmt) return {input: raw, status: 'HORS_VIES', detail: 'pays ' + parsed.countryCode + ' non couvert par VIES'};
   if (!fmt.test(parsed.vatNumber)) return {input: raw, status: 'FORMAT_INVALIDE', detail: 'format incompatible avec ' + parsed.countryCode};
   try {
-    const response = await fetcher(VIES_ENDPOINT, {
+    const response = await fetcher(endpoint, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({countryCode: parsed.countryCode, vatNumber: parsed.vatNumber}),
