@@ -162,6 +162,10 @@ Les numéros de TVA transitent alors par votre Worker avant d'atteindre la Commi
 
 `node scripts/check-vies.mjs` contrôle l'API réelle (numéros publics connus, en-têtes CORS) depuis un poste connecté.
 
+## Export de la carte (PNG)
+
+Le bouton « Exporter la carte (PNG) » nomme le fichier d'après le code NUTS complet : `carte_nuts_BE100.png`. Code retenu : zone sélectionnée sur la carte, sinon ligne sélectionnée (au niveau NUTS affiché), sinon code unique commun à toutes les lignes affichées ; à défaut `carte_nuts.png`.
+
 ## Statut et confiance
 
 | Statut | Signification |
