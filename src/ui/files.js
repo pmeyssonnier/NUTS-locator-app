@@ -9,6 +9,7 @@ import {updateSummaries} from './folds.js';
 import {render} from './render.js';
 import {FIELDS, S} from './state.js';
 import {buildCols} from './table.js';
+import {detectVatColumn} from './vies-excel.js';
 
 export function buildMap(){
   $('#mapBox').innerHTML=FIELDS.map(([k,l])=>`<label>${l}<select id="m_${k}"><option value="">—</option>${S.headers.map(h=>`<option>${esc(h)}</option>`).join('')}</select></label>`).join('');
@@ -34,6 +35,7 @@ function loadGrid(grid,label){
   S.sortCol=null;S.cardsMax=60;S.hidden.clear();S.rows.forEach((o,i)=>o.__i=i);S.selRow=null;S.label=label;$('#restoreBox').hidden=true;
   $('#loaded').textContent=`${label} : ${S.rows.length} lignes, ${S.headers.length} colonnes.`;
   buildMap();buildCols();
+  const vatSel=$('#vatColumn');if(vatSel){vatSel.replaceChildren(new Option('— Choisir —',''));S.headers.forEach(h=>vatSel.add(new Option(h,h)));vatSel.value=detectVatColumn(S.headers);$('#vatRunExcel').disabled=!vatSel.value;}
   const pc=$('#m_pays').value;if(pc&&S.rows.some(r=>/^(uk|gb|united kingdom|royaume-uni|great britain)$/i.test(val(r,pc))))$('#withUK').checked=true;
   render();btns();setStatus('Vérifiez le mappage des colonnes puis cliquez sur « Géocoder ».');
 }
