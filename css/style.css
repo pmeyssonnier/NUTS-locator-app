@@ -112,7 +112,7 @@ body.fs-open{overflow:hidden}
   #run{flex:2 1 180px}
   .m-only{display:flex}
   #count{flex:1 1 100%}
-  .tablewrap,#tblHelp{display:none}
+  #tblWrap,#tblHelp{display:none}
   #mapwrap{height:62vh;height:62dvh;min-height:320px}
   #pop{max-width:calc(100% - 12px)}
   #legend{font-size:12px}
@@ -130,3 +130,4 @@ body.fs-open{overflow:hidden}
 .quality .q-A,.quality .q-B{color:var(--ok)}.quality .q-C,.quality .q-D{color:var(--warn)}.quality .q-E{color:var(--err)}
 .quality ul{margin:0;padding:0;list-style:none;font-size:12px;flex:1;min-width:220px}.quality li{display:flex;justify-content:space-between;gap:10px;padding:1px 0}
 .quality .muted{font-size:12px}
+.vs-VALIDE{color:var(--ok);font-weight:600}.vs-INVALIDE,.vs-FORMAT_INVALIDE{color:var(--err);font-weight:600}.vs-SERVICE_INDISPONIBLE,.vs-INDETERMINE,.vs-HORS_VIES{color:var(--warn);font-weight:600}

@@ -39,7 +39,7 @@ export function initVies() {
       results.push(result);
       const tr = document.createElement('tr');
       for (const field of ['input','status','name','address','detail']) {
-        const td = document.createElement('td'); td.textContent = result[field] || ''; tr.append(td);
+        const td = document.createElement('td'); td.textContent = result[field] || ''; if (field === 'status') td.className = 'vs-' + result.status; tr.append(td);
       }
       table.append(tr);
       status.textContent = (index + 1) + '/' + values.length + ' numéros traités.';

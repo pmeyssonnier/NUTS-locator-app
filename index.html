@@ -114,7 +114,7 @@
       <button id="vatExport" disabled>Exporter CSV</button>
     </div>
     <p id="vatStatus" role="status" aria-live="polite">Prêt. Maximum 200 numéros par lot.</p>
-    <div class="tablewrap"><table aria-label="Résultats VIES"><thead><tr><th>TVA</th><th>Statut</th><th>Nom officiel</th><th>Adresse officielle</th><th>Détail</th></tr></thead><tbody id="vatRows"></tbody></table></div>
+    <div class="tablewrap vatwrap"><table aria-label="Résultats VIES"><thead><tr><th>TVA</th><th>Statut</th><th>Nom officiel</th><th>Adresse officielle</th><th>Détail</th></tr></thead><tbody id="vatRows"></tbody></table></div>
   </section>
   <section class="card" id="sec-results" tabindex="-1" aria-labelledby="h-results">
     <h2 id="h-results">4. Résultats</h2>
@@ -139,7 +139,7 @@
     <p class="notice" id="tblHelp">Clavier : Tab pour entrer dans le tableau, flèches haut/bas, Début/Fin et Page haut/bas pour changer de ligne, Entrée pour afficher la ligne sur la carte ; Entrée sur un en-tête pour trier.</p>
     <ul id="cards" class="cards" aria-label="Résultats du géocodage" hidden></ul>
     <button class="more" id="more" hidden></button>
-    <div class="tablewrap"><table aria-label="Résultats du géocodage" aria-describedby="tblHelp"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <div class="tablewrap" id="tblWrap"><table aria-label="Résultats du géocodage" aria-describedby="tblHelp"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
   <section class="card" id="sec-map" tabindex="-1" aria-labelledby="h-map">
     <h2 id="h-map">5. Carte</h2>
