@@ -1,0 +1,7 @@
+name = "nuts-vies-proxy"
+main = "vies-proxy.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+# Origines autorisées à appeler le relais (séparées par des virgules). Ajouter http://localhost:8000 pour les essais locaux.
+ALLOWED_ORIGINS = "https://pmeyssonnier.github.io"

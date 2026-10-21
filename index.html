@@ -94,8 +94,31 @@
     </details>
   </section>
 
+  <section class="card" id="sec-vies" aria-labelledby="h-vies">
+    <h2 id="h-vies">3. Validation TVA intracommunautaire (VIES)</h2>
+    <p class="notice">Saisissez des numéros de TVA complets avec préfixe pays (ex. BE0123456789), un par ligne. Le contrôle officiel nécessite Internet. Le nom et l'adresse ne sont pas toujours fournis par VIES. Les numéros saisis sont envoyés à la Commission européenne ; aucun résultat n'est sauvegardé localement.</p>
+    <label class="wide" for="vatProxy" title="Cloudflare Worker (dossier worker/ du dépôt) : VIES n'autorise pas les appels directs depuis un navigateur">Relais VIES (URL du Worker Cloudflare)<input type="url" id="vatProxy" placeholder="https://nuts-vies-proxy.xxx.workers.dev"></label>
+    <details class="fold" open><summary>Contrôler la colonne TVA du fichier importé</summary>
+<div class="row"><label>Colonne TVA <select id="vatColumn"><option value="">— Choisir —</option></select></label>
+<button id="vatDetectExcel">Détecter la colonne</button>
+<button class="primary" id="vatRunExcel" disabled>Vérifier les TVA du fichier</button>
+<button id="vatStopExcel" disabled>Arrêter</button></div>
+<p id="vatExcelStatus" role="status">Chargez un fichier Excel/CSV avec une colonne TVA.</p>
+<p class="notice">Les contrôles VIES enrichissent les résultats et exports. Les comparaisons de nom et d'adresse sont indicatives.</p>
+</details>
+<label class="wide" for="vatInput">Numéros TVA à contrôler</label>
+    <textarea id="vatInput" rows="5" style="width:100%" placeholder="BE0123456789&#10;FR12345678901"></textarea>
+    <div class="row">
+      <button class="primary" id="vatCheck">Vérifier via VIES</button>
+      <button id="vatStop" disabled>Arrêter</button>
+      <button id="vatExport" disabled>Exporter CSV</button>
+    </div>
+    <p id="vatStatus" role="status" aria-live="polite">Prêt. Maximum 200 numéros par lot.</p>
+    <div class="tablewrap"><table aria-label="Résultats VIES"><thead><tr><th>TVA</th><th>Statut</th><th>Nom officiel</th><th>Adresse officielle</th><th>Détail</th></tr></thead><tbody id="vatRows"></tbody></table></div>
+  </section>
   <section class="card" id="sec-results" tabindex="-1" aria-labelledby="h-results">
-    <h2 id="h-results">3. Résultats</h2>
+    <h2 id="h-results">4. Résultats</h2>
+    <div id="qualityBox" class="quality" role="group" aria-label="Score global de qualité des données" hidden></div>
     <div class="row">
       <label class="wide">Filtrer<input type="text" id="filter" placeholder="texte…"></label>
       <label class="inline"><input type="checkbox" id="expVisible" checked> Exporter seulement les colonnes visibles</label>
@@ -119,7 +142,7 @@
     <div class="tablewrap"><table aria-label="Résultats du géocodage" aria-describedby="tblHelp"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
   <section class="card" id="sec-map" tabindex="-1" aria-labelledby="h-map">
-    <h2 id="h-map">4. Carte</h2>
+    <h2 id="h-map">5. Carte</h2>
     <div class="row">
       <label>Fond de carte<select id="base"><option value="osm" selected>OpenStreetMap</option><option value="voyager">CARTO Voyager (clé gratuite)</option><option value="custom">URL personnalisée</option><option value="none">Aucun</option></select></label>
       <label id="lblKey" class="wide" hidden>Clé CARTO<input type="text" id="cartoKey" placeholder="clé reçue par e-mail" autocomplete="off"></label>
@@ -142,7 +165,7 @@
     <p class="notice" id="mapHelp">Clavier (carte active) : flèches pour déplacer (Maj : plus loin) · + et − pour zoomer · 0 ou Début pour tout afficher · Page suivante / précédente pour passer au point suivant / précédent · Échap pour fermer l'info.</p>
   </section>
 </main>
-<nav class="tabbar" id="tabbar" aria-label="Sections"><a href="#sec-data">Données</a><a href="#sec-geo">Géocodage</a><a href="#sec-results">Résultats</a><a href="#sec-map">Carte</a></nav>
+<nav class="tabbar" id="tabbar" aria-label="Sections"><a href="#sec-data">Données</a><a href="#sec-geo">Géocodage</a><a href="#sec-vies">TVA</a><a href="#sec-results">Résultats</a><a href="#sec-map">Carte</a></nav>
 <div id="live" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
 <footer><span id="ver"></span> Géocodage © contributeurs OpenStreetMap (Nominatim, max 1 requête/s). Limites administratives © EuroGeographics — Eurostat GISCO, NUTS 2024.</footer>
 

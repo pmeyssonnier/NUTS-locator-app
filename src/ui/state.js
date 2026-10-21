@@ -8,7 +8,7 @@ export const FIELDS=[['adr','Adresse (rue)',/^(adresse|address|rue|street|straat
  ['cp','Code postal',/(code.?postal|postcode|postal|zip|plz|^cp$|^npa$)/],
  ['ville','Ville',/^(ville|city|localite|commune|gemeente|ort|stadt|citta|ciudad|town)/],
  ['pays','Pays',/^(pays|country|land|cntr|iso|nation)/]];
-export const allCols=()=>[...S.headers,...RES];
+export const allCols=()=>[...S.headers,...RES,...['TVA_VIES','VIES_statut','VIES_nom','VIES_adresse','VIES_date','VIES_identifiant','VIES_coherence_nom','VIES_coherence_adresse','VIES_detail'].filter(k=>S.rows.some(r=>r[k]!==undefined)),...(S.rows.some(r=>r.score_qualite!==undefined)?['score_qualite']:[])];
 export const getMap=()=>Object.fromEntries(FIELDS.map(([k])=>[k,$('#m_'+k).value]));
 export const ukOn=()=>$('#withUK').checked;
 export const lkey=(l,res)=>`${l}_${res}_${ukOn()?1:0}`;

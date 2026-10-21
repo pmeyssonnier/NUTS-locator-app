@@ -127,6 +127,37 @@ Moins précis que le géocodage : le NUTS 3 est celui du centroïde du code post
 - Les tables conservées dans le navigateur occupent de la place (plusieurs dizaines de Mo avec le fichier tous pays, surtout NL et PT) ; « Retirer les tables » la libère.
 - Le code postal saisi est utilisé en priorité, puis celui trouvé par le géocodeur.
 
+## Validation TVA (VIES) et score de qualité
+
+**Section 3 « Validation TVA intracommunautaire »** : contrôle de numéros de TVA auprès de l'API REST VIES de la Commission européenne (aucune clé). Deux usages : saisie libre (un numéro par ligne, 200 maximum, CSV exportable) ou contrôle de la colonne TVA du fichier importé (détectée automatiquement), avec colonnes `TVA_VIES`, `VIES_statut`, `VIES_nom`, `VIES_adresse`, `VIES_date`, `VIES_identifiant`, `VIES_coherence_nom`, `VIES_coherence_adresse`, `VIES_detail` ajoutées aux résultats et exports.
+
+Avant tout appel réseau, le format national du numéro est vérifié (`FORMAT_INVALIDE`) ; `GB` et les pays hors VIES donnent `HORS_VIES` (utiliser `XI` pour l'Irlande du Nord). Les doublons sont contrôlés une seule fois. Statuts : `VALIDE`, `INVALIDE`, `FORMAT_INVALIDE`, `HORS_VIES`, `SERVICE_INDISPONIBLE` (erreur du service ou de l'État membre : ce n'est pas un numéro invalide), `INDETERMINE`. Les numéros saisis sont envoyés à la Commission européenne.
+
+**Score global de qualité** (encadré au-dessus des résultats, colonne `score_qualite` par ligne, 0–100, notes A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, E) : moyenne pondérée de quatre dimensions, chacune ignorée si aucune ligne n'est évaluable (les poids restants sont renormalisés).
+
+| Dimension | Poids | Barème par ligne |
+|---|---|---|
+| Géocodage / NUTS | 40 | OK 1 · CP_SEUL 0,9 · NUTS_PROCHE 0,8 · A_VERIFIER 0,5 · PAYS_INCOHERENT 0,25 · autres 0 |
+| Cohérence code postal ↔ NUTS | 25 | OUI 1 · LIMITROPHE 0,8 · MEME_NUTS2 / VERSION_DIFFERENTE 0,6 · NON / CP_ABSENT 0 · SANS_TABLE ignoré |
+| Numéros de TVA | 20 | VALIDE 1 (− 0,1 à − 0,3 par incohérence nom / adresse) · INVALIDE / FORMAT_INVALIDE 0 · indisponible / hors VIES ignoré |
+| Complétude des adresses | 15 | part des colonnes adresse, code postal, ville, pays renseignées |
+
+### Relais VIES (Cloudflare Worker)
+
+L'API VIES n'envoie pas d'en-têtes CORS : un navigateur ne peut pas l'appeler directement depuis GitHub Pages. Le dossier `worker/` contient un relais gratuit (≈ 40 lignes, sans journal ni stockage) qui transmet la requête à VIES et ajoute les en-têtes CORS pour les seules origines listées dans `ALLOWED_ORIGINS`.
+
+Déploiement (depuis un poste avec Node ; compte Cloudflare gratuit) :
+```
+cd worker
+npx wrangler login
+npx wrangler deploy
+```
+Wrangler affiche l'adresse du Worker (`https://nuts-vies-proxy.<compte>.workers.dev`). Collez-la dans le champ « Relais VIES » de la section 3 (mémorisé dans le navigateur). Pour des essais locaux, ajoutez `http://localhost:8000` à `ALLOWED_ORIGINS` dans `worker/wrangler.toml`. Contrôle : `node scripts/check-vies.mjs https://nuts-vies-proxy.<compte>.workers.dev`.
+
+Les numéros de TVA transitent alors par votre Worker avant d'atteindre la Commission européenne.
+
+`node scripts/check-vies.mjs` contrôle l'API réelle (numéros publics connus, en-têtes CORS) depuis un poste connecté.
+
 ## Statut et confiance
 
 | Statut | Signification |
