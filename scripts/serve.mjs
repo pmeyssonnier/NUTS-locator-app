@@ -5,6 +5,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import relay from '../worker/vies-proxy.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const asked = process.argv[2] || process.env.PORT;
@@ -13,7 +14,19 @@ const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   '.json': 'application/json', '.geojson': 'application/geo+json', '.png': 'image/png', '.svg': 'image/svg+xml',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.md': 'text/markdown; charset=utf-8'};
 
+// Relais VIES local (même code que le Worker Cloudflare) : l'API VIES n'autorise pas les appels directs depuis un navigateur.
+// Réservé aux appels de la page servie par ce serveur (Origin = Host).
+async function viesRelay(req, res) {
+  const chunks = [];
+  for await (const c of req) { chunks.push(c); if (chunks.reduce((n, x) => n + x.length, 0) > 4096) { res.writeHead(413).end(); return; } }
+  const origin = 'http://' + req.headers.host;
+  const r = await relay.fetch(new Request(origin + '/api/vies', {method: req.method, headers: {origin: req.headers.origin || '', 'content-type': 'application/json'},
+    body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks)}), {ALLOWED_ORIGINS: origin});
+  res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
+}
+
 const server = http.createServer((req, res) => {
+  if (req.url.split('?')[0] === '/api/vies') { viesRelay(req, res).catch(() => res.writeHead(500).end()); return; }
   const url = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
   const file = path.join(root, url.endsWith('/') ? url + 'index.html' : url);
   if (!file.startsWith(root)) { res.writeHead(403).end('Interdit'); return; }

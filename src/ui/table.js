@@ -25,7 +25,7 @@ function renderCards(rows){
   const idx=S.selRow?rows.indexOf(S.selRow):-1;if(idx>=0)S.cardsMax=cardsLimit(S.cardsMax,idx);
   const shown=rows.slice(0,S.cardsMax),ae=document.activeElement,keep=ae?.matches?.('#cards [data-act="map"]')?ae.closest('.rc').dataset.i:null;
   $('#thead').innerHTML='';$('#tbody').innerHTML='';
-  $('#cards').innerHTML=shown.map(cardHtml).join('');$('#cards').hidden=false;$('.tablewrap').hidden=true;
+  $('#cards').innerHTML=shown.map(cardHtml).join('');$('#cards').hidden=false;$('#tblWrap').hidden=true;
   const rest=rows.length-shown.length,more=$('#more');more.hidden=rest<=0;more.textContent=`Afficher ${Math.min(60,rest)} lignes de plus (${rest} restantes)`;
   $('#count').textContent=`${rows.length} / ${S.rows.length} lignes`;
   $('#sortSel').value=S.sortCol||'';
@@ -34,7 +34,7 @@ function renderCards(rows){
 export function renderList(){
   const {cols,rows}=view();
   if(S.cards){renderCards(rows);return;}
-  $('#cards').hidden=true;$('#more').hidden=true;$('.tablewrap').hidden=false;
+  $('#cards').hidden=true;$('#more').hidden=true;$('#tblWrap').hidden=false;
   // le tableau est reconstruit : on mémorise l'élément qui a le focus pour le lui rendre ensuite
   const ae=document.activeElement,fTh=ae?.closest?.('#thead th'),fTr=ae?.closest?.('#tbody tr');
   const keepTh=fTh?fTh.dataset.col:null,keepTr=fTr?fTr.dataset.i:null;

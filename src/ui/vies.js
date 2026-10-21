@@ -2,8 +2,9 @@
 import {checkVat as check, parseVat, VIES_ENDPOINT} from '../lib/vies.js';
 import {prefGet, prefSet} from './storage.js';
 export {parseVat};
-// URL du relais (Cloudflare Worker) si renseignée, sinon appel direct à VIES (bloqué par CORS dans la plupart des navigateurs)
-export const viesEndpoint = () => (prefGet('viesProxy') || '').trim() || VIES_ENDPOINT;
+// Ordre : URL du relais saisie (Worker Cloudflare) > relais /api/vies du serveur `npm start` (localhost / réseau local) > appel direct à VIES (bloqué par CORS)
+const local = () => /^(localhost|127\.|\[::1\]|192\.168\.|10\.)/.test(location.hostname) && location.protocol === 'http:';
+export const viesEndpoint = () => (prefGet('viesProxy') || '').trim() || (local() ? '/api/vies' : VIES_ENDPOINT);
 export const checkVat = raw => check(raw, fetch, viesEndpoint());
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
@@ -38,7 +39,7 @@ export function initVies() {
       results.push(result);
       const tr = document.createElement('tr');
       for (const field of ['input','status','name','address','detail']) {
-        const td = document.createElement('td'); td.textContent = result[field] || ''; tr.append(td);
+        const td = document.createElement('td'); td.textContent = result[field] || ''; if (field === 'status') td.className = 'vs-' + result.status; tr.append(td);
       }
       table.append(tr);
       status.textContent = (index + 1) + '/' + values.length + ' numéros traités.';

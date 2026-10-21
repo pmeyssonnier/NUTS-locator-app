@@ -1,6 +1,6 @@
 import {findNuts, prepNuts} from '../lib/geo.js';
 import {mapKeyAction} from '../lib/keys.js';
-import {merc, pinchZoom, tileScale, unmerc} from '../lib/mapmath.js';
+import {mapPngName, merc, pinchZoom, tileScale, unmerc} from '../lib/mapmath.js';
 import {MARKER_PTS, MARKERS, markerStyle, markerSvg} from '../lib/markers.js';
 import {esc, isNum} from '../lib/util.js';
 import {$, announce, coarse, download, setStatus, smooth} from './dom.js';
@@ -175,7 +175,7 @@ export function initMap(h){
   $('#withUK').onchange=()=>{MAP.selZone=null;hidePop();if(+$('#lvl').value)ensureLevel();};
   $('#onlyWith').onchange=draw;$('#choro').onchange=draw;
   $('#png').onclick=()=>{
-    const save=()=>cv.toBlob(b=>b?download(b,'carte_nuts.png'):setStatus('Export PNG impossible.',true),'image/png');
+    const save=()=>cv.toBlob(b=>b?download(b,mapPngName(MAP.selZone,S.selRow,view().rows,+$('#lvl').value)):setStatus('Export PNG impossible.',true),'image/png');
     try{save();}catch(e){
       MAP.noTiles=true;paint();
       try{save();setStatus('Fond de carte non exportable (CORS) : carte exportée avec contours et points, sans fond.');}
