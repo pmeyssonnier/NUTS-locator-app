@@ -116,7 +116,8 @@
     <div class="tablewrap"><table aria-label="Résultats VIES"><thead><tr><th>TVA</th><th>Statut</th><th>Nom officiel</th><th>Adresse officielle</th><th>Détail</th></tr></thead><tbody id="vatRows"></tbody></table></div>
   </section>
   <section class="card" id="sec-results" tabindex="-1" aria-labelledby="h-results">
-    <h2 id="h-results">3. Résultats</h2>
+    <h2 id="h-results">4. Résultats</h2>
+    <div id="qualityBox" class="quality" role="group" aria-label="Score global de qualité des données" hidden></div>
     <div class="row">
       <label class="wide">Filtrer<input type="text" id="filter" placeholder="texte…"></label>
       <label class="inline"><input type="checkbox" id="expVisible" checked> Exporter seulement les colonnes visibles</label>
@@ -140,7 +141,7 @@
     <div class="tablewrap"><table aria-label="Résultats du géocodage" aria-describedby="tblHelp"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
   <section class="card" id="sec-map" tabindex="-1" aria-labelledby="h-map">
-    <h2 id="h-map">4. Carte</h2>
+    <h2 id="h-map">5. Carte</h2>
     <div class="row">
       <label>Fond de carte<select id="base"><option value="osm" selected>OpenStreetMap</option><option value="voyager">CARTO Voyager (clé gratuite)</option><option value="custom">URL personnalisée</option><option value="none">Aucun</option></select></label>
       <label id="lblKey" class="wide" hidden>Clé CARTO<input type="text" id="cartoKey" placeholder="clé reçue par e-mail" autocomplete="off"></label>

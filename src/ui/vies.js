@@ -1,36 +1,7 @@
-// Vérification VIES indépendante du géocodage. Aucune clé API requise.
-const ENDPOINT = 'https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number';
+// Vérification VIES indépendante du géocodage (interface). Logique réseau dans lib/vies.js.
+import {checkVat, parseVat} from '../lib/vies.js';
+export {checkVat, parseVat};
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-export function parseVat(raw) {
-  const clean = String(raw ?? '').toUpperCase().replace(/[\s.\-]/g, '');
-  const match = /^([A-Z]{2})([A-Z0-9]{2,14})$/.exec(clean);
-  if (!match) return null;
-  return { countryCode: match[1] === 'GR' ? 'EL' : match[1], vatNumber: match[2], input: clean };
-}
-export async function checkVat(raw, fetcher = fetch) {
-  const parsed = parseVat(raw);
-  if (!parsed) return {input: raw, status: 'FORMAT_INVALIDE'};
-  if (parsed.countryCode === 'GB') return {input: raw, status: 'HORS_VIES', detail: 'GB hors VIES ; utiliser XI pour les cas éligibles en Irlande du Nord'};
-  try {
-    const response = await fetcher(ENDPOINT, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({countryCode: parsed.countryCode, vatNumber: parsed.vatNumber}),
-      signal: AbortSignal.timeout(15000)
-    });
-    if (!response.ok) return {input: raw, status: 'SERVICE_INDISPONIBLE', detail: 'HTTP ' + response.status};
-    const data = await response.json();
-    if (typeof data.valid !== 'boolean') return {input: raw, status: 'INDETERMINE', detail: data.userError || data.error || 'Réponse VIES inattendue'};
-    return {
-      input: raw, status: data.valid ? 'VALIDE' : 'INVALIDE',
-      name: data.name || '', address: data.address || '',
-      checkedAt: data.requestDate || new Date().toISOString(),
-      requestIdentifier: data.requestIdentifier || ''
-    };
-  } catch (error) {
-    return {input: raw, status: 'SERVICE_INDISPONIBLE', detail: error?.message || String(error)};
-  }
-}
 const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
 export function initVies() {
   const input = document.getElementById('vatInput');
@@ -42,7 +13,9 @@ export function initVies() {
   let stopped = false, busy = false, results = [];
   button.addEventListener('click', async () => {
     if (busy) return;
-    const values = [...new Set(input.value.split(/[\n;,]+/).map(s => s.trim()).filter(Boolean))].slice(0, 200);
+    const seen = new Set();   // doublons repérés sur le numéro normalisé (« BE 0123.456.789 » = « BE0123456789 »)
+    const values = input.value.split(/[\n;,]+/).map(s => s.trim()).filter(Boolean)
+      .filter(v => { const k = parseVat(v)?.input || v.toUpperCase(); return seen.has(k) ? false : (seen.add(k), true); }).slice(0, 200);
     if (!values.length) {status.textContent = 'Saisissez au moins un numéro TVA.'; return;}
     busy = true; stopped = false; results = []; table.replaceChildren();
     button.disabled = true; stop.disabled = false; exportButton.disabled = true;

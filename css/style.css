@@ -124,3 +124,9 @@ body.fs-open{overflow:hidden}
 @media (min-width:721px){.cards,.more{display:none}}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 .card{scroll-margin-top:8px}
+
+.quality{margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.quality .qs{font-size:28px;font-weight:700;line-height:1}.quality .qs small{font-size:13px;font-weight:600;margin-left:6px}
+.quality .q-A,.quality .q-B{color:var(--ok)}.quality .q-C,.quality .q-D{color:var(--warn)}.quality .q-E{color:var(--err)}
+.quality ul{margin:0;padding:0;list-style:none;font-size:12px;flex:1;min-width:220px}.quality li{display:flex;justify-content:space-between;gap:10px;padding:1px 0}
+.quality .muted{font-size:12px}

@@ -1,4 +1,5 @@
 import {checkVat, parseVat} from './vies.js';
+import {compareName, compareAddressParts} from '../lib/vies.js';
 import {S} from './state.js';
 import {buildCols} from './table.js';
 import {render} from './render.js';
@@ -7,25 +8,16 @@ import {norm} from '../lib/util.js';
 
 export const VAT_COLUMNS=['TVA_VIES','VIES_statut','VIES_nom','VIES_adresse','VIES_date','VIES_identifiant','VIES_coherence_nom','VIES_coherence_adresse','VIES_detail'];
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const normalized=s=>norm(String(s??'')).replace(/[^a-z0-9]/g,'');
 export function detectVatColumn(headers) {
-  return headers.find(h=>/^(tva|vat|vat.?number|numero.?tva|n.?tva|btw.?nummer|ust.?id|partita.?iva|nif.?iva|nif.?intracommunautaire)$/i.test(normalized(h))) ||
-    headers.find(h=>/tva|vat|btw|ustid|partitaiva/i.test(normalized(h))) || '';
+  const n=h=>norm(String(h??'')).replace(/[^a-z0-9]/g,'');
+  return headers.find(h=>/^(tva|vat|vatnumber|numerotva|ntva|btwnummer|ustid|partitaiva|nifiva|nifintracommunautaire)$/.test(n(h))) ||
+    headers.find(h=>/tva|vat|btw|ustid|partitaiva/.test(n(h))) || '';
 }
-export function compareName(a,b){
-  if(!a||!b)return 'NON_DISPONIBLE';
-  const x=normalized(a),y=normalized(b);
-  if(!x||!y)return 'NON_DISPONIBLE';
-  return x===y?'IDENTIQUE':x.includes(y)||y.includes(x)?'PARTIEL':'DIFFERENT';
-}
+export {compareName};
 export function compareAddress(row,official) {
-  if(!official)return 'NON_DISPONIBLE';
   const pieces=[/^(adresse|address|rue|street|straat)/i,/^(code.?postal|postcode|postal|zip|plz|cp)$/i,/^(ville|city|localite|commune|gemeente|stadt)/i]
-    .map(re=>S.headers.find(h=>re.test(h))||'').filter(Boolean).map(h=>row[h]).filter(Boolean);
-  if(!pieces.length)return 'NON_DISPONIBLE';
-  const text=normalized(official);
-  const hits=pieces.filter(p=>text.includes(normalized(p))).length;
-  return hits===pieces.length?'COHERENTE':hits?'PARTIELLE':'A_VERIFIER';
+    .map(re=>S.headers.find(h=>re.test(h))||'').filter(Boolean).map(h=>row[h]);
+  return compareAddressParts(pieces,official);
 }
 export function initViesExcel(){
   const select=$('#vatColumn'),button=$('#vatRunExcel'),stop=$('#vatStopExcel'),status=$('#vatExcelStatus');
