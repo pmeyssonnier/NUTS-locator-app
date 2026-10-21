@@ -14,6 +14,7 @@ Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le cod
 
 - **En ligne** : la version publiée sur GitHub Pages (fichiers statiques, rien à configurer).
 - **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez l'adresse affichée dans le terminal (http://localhost:8000 par défaut). Si ce port est déjà pris par un autre programme (on voit alors une autre application à cette adresse), le serveur prend le port suivant libre et l'affiche ; pour imposer un port : `npm start -- 8765`. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
+- **Sous Termux (Android)** : `pkg install nodejs git`, clonez le dépôt puis `bash scripts/termux-start.sh` : le script met à jour (`git pull origin main` ; une autre branche en argument : `bash scripts/termux-start.sh ma-branche`), lance le serveur, ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8000 est pris) et arrête le serveur à `Ctrl+C`.
 
 1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ». Pour une ou quelques adresses, ouvrez « Saisir une adresse manuellement » : « Ajouter et lancer » (ou Entrée) ajoute l'adresse à la liste « Saisie manuelle » et la traite aussitôt (géocodage ou mode sans géocodage selon la case cochée), puis l'affiche sur la carte ; « Ajouter sans lancer » permet d'en saisir plusieurs avant de cliquer sur « Géocoder ». Le pays peut rester vide (pays par défaut des réglages). Si un fichier est déjà chargé, une confirmation est demandée avant de le remplacer.
 2. **Colonnes & géocodage** : les colonnes sont reconnues automatiquement (le résumé les affiche) ; cliquez sur « Géocoder ». Les sections « Colonnes », « Réglages » (e-mail pour la politique Nominatim, pays par défaut, précision des contours, Royaume-Uni, serveur), « Imports hors ligne » (contours, tables Eurostat) et « Confidentialité et limites » sont repliées pour tenir sur un écran de téléphone ; un clic sur leur titre les ouvre. La section « Colonnes » s'ouvre d'elle-même quand aucune colonne n'est reconnue.
@@ -144,7 +145,7 @@ Avant tout appel réseau, le format national du numéro est vérifié (`FORMAT_I
 
 ### Relais VIES : serveur local (sans compte) ou Cloudflare Worker
 
-**Sans rien configurer, en local** : `npm start` (ou Termux : `node scripts/serve.mjs`) fournit un relais `/api/vies` (même code que le Worker, réservé à la page qu'il sert). Ouvrez l'application via `http://localhost:8000` : la section 3 l'utilise automatiquement. Sur GitHub Pages, ce relais n'existe pas : il faut le Worker ci-dessous.
+**Sans rien configurer, en local** : `npm start` (ou Termux : `bash scripts/termux-start.sh`) fournit un relais `/api/vies` (même code que le Worker, réservé à la page qu'il sert). Ouvrez l'application via `http://localhost:8000` : la section 3 l'utilise automatiquement. Sur GitHub Pages, ce relais n'existe pas : il faut le Worker ci-dessous.
 
 #### Cloudflare Worker (pour GitHub Pages)
 
@@ -233,7 +234,8 @@ src/ui/             interface (DOM)
   files.js run.js cache.js results.js exports.js session.js layout.js controls.js   fonctions de l'application
   selftests.js                   auto-tests du navigateur (#tests)
 test/               tests Node (node:test)
-scripts/serve.mjs   serveur statique local (npm start)
+scripts/serve.mjs   serveur statique local (npm start) et relais VIES /api/vies
+scripts/termux-start.sh   Termux : mise à jour, serveur local et ouverture du navigateur
 ```
 
 Règles de dépendance : `src/lib/` n'importe jamais `src/ui/`, et il n'y a aucun import circulaire. Les modules qui dessinent (`table.js`, `map.js`) ne connaissent pas l'orchestration : `main.js` leur passe leurs actions (sélection, tri, effacement) à l'initialisation (`initMap`, `initTable`). Pour ajouter une règle de géocodage ou de statut, il suffit de modifier `src/lib/` et ses tests.
