@@ -94,6 +94,19 @@
     </details>
   </section>
 
+  <section class="card" id="sec-vies" aria-labelledby="h-vies">
+    <h2 id="h-vies">3. Validation TVA intracommunautaire (VIES)</h2>
+    <p class="notice">Saisissez des numéros de TVA complets avec préfixe pays (ex. BE0123456789), un par ligne. Le contrôle officiel nécessite Internet. Le nom et l'adresse ne sont pas toujours fournis par VIES. Les numéros saisis sont envoyés à la Commission européenne ; aucun résultat n'est sauvegardé localement.</p>
+    <label class="wide" for="vatInput">Numéros TVA à contrôler</label>
+    <textarea id="vatInput" rows="5" style="width:100%" placeholder="BE0123456789&#10;FR12345678901"></textarea>
+    <div class="row">
+      <button class="primary" id="vatCheck">Vérifier via VIES</button>
+      <button id="vatStop" disabled>Arrêter</button>
+      <button id="vatExport" disabled>Exporter CSV</button>
+    </div>
+    <p id="vatStatus" role="status" aria-live="polite">Prêt. Maximum 200 numéros par lot.</p>
+    <div class="tablewrap"><table aria-label="Résultats VIES"><thead><tr><th>TVA</th><th>Statut</th><th>Nom officiel</th><th>Adresse officielle</th><th>Détail</th></tr></thead><tbody id="vatRows"></tbody></table></div>
+  </section>
   <section class="card" id="sec-results" tabindex="-1" aria-labelledby="h-results">
     <h2 id="h-results">3. Résultats</h2>
     <div class="row">
@@ -142,7 +155,7 @@
     <p class="notice" id="mapHelp">Clavier (carte active) : flèches pour déplacer (Maj : plus loin) · + et − pour zoomer · 0 ou Début pour tout afficher · Page suivante / précédente pour passer au point suivant / précédent · Échap pour fermer l'info.</p>
   </section>
 </main>
-<nav class="tabbar" id="tabbar" aria-label="Sections"><a href="#sec-data">Données</a><a href="#sec-geo">Géocodage</a><a href="#sec-results">Résultats</a><a href="#sec-map">Carte</a></nav>
+<nav class="tabbar" id="tabbar" aria-label="Sections"><a href="#sec-data">Données</a><a href="#sec-geo">Géocodage</a><a href="#sec-vies">TVA</a><a href="#sec-results">Résultats</a><a href="#sec-map">Carte</a></nav>
 <div id="live" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
 <footer><span id="ver"></span> Géocodage © contributeurs OpenStreetMap (Nominatim, max 1 requête/s). Limites administratives © EuroGeographics — Eurostat GISCO, NUTS 2024.</footer>
 
