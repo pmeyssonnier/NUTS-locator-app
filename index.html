@@ -97,7 +97,15 @@
   <section class="card" id="sec-vies" aria-labelledby="h-vies">
     <h2 id="h-vies">3. Validation TVA intracommunautaire (VIES)</h2>
     <p class="notice">Saisissez des numéros de TVA complets avec préfixe pays (ex. BE0123456789), un par ligne. Le contrôle officiel nécessite Internet. Le nom et l'adresse ne sont pas toujours fournis par VIES. Les numéros saisis sont envoyés à la Commission européenne ; aucun résultat n'est sauvegardé localement.</p>
-    <label class="wide" for="vatInput">Numéros TVA à contrôler</label>
+    <details class="fold" open><summary>Contrôler la colonne TVA du fichier importé</summary>
+<div class="row"><label>Colonne TVA <select id="vatColumn"><option value="">— Choisir —</option></select></label>
+<button id="vatDetectExcel">Détecter la colonne</button>
+<button class="primary" id="vatRunExcel" disabled>Vérifier les TVA du fichier</button>
+<button id="vatStopExcel" disabled>Arrêter</button></div>
+<p id="vatExcelStatus" role="status">Chargez un fichier Excel/CSV avec une colonne TVA.</p>
+<p class="notice">Les contrôles VIES enrichissent les résultats et exports. Les comparaisons de nom et d'adresse sont indicatives.</p>
+</details>
+<label class="wide" for="vatInput">Numéros TVA à contrôler</label>
     <textarea id="vatInput" rows="5" style="width:100%" placeholder="BE0123456789&#10;FR12345678901"></textarea>
     <div class="row">
       <button class="primary" id="vatCheck">Vérifier via VIES</button>
