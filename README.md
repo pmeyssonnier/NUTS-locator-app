@@ -142,7 +142,11 @@ Avant tout appel réseau, le format national du numéro est vérifié (`FORMAT_I
 | Numéros de TVA | 20 | VALIDE 1 (− 0,1 à − 0,3 par incohérence nom / adresse) · INVALIDE / FORMAT_INVALIDE 0 · indisponible / hors VIES ignoré |
 | Complétude des adresses | 15 | part des colonnes adresse, code postal, ville, pays renseignées |
 
-### Relais VIES (Cloudflare Worker)
+### Relais VIES : serveur local (sans compte) ou Cloudflare Worker
+
+**Sans rien configurer, en local** : `npm start` (ou Termux : `node scripts/serve.mjs`) fournit un relais `/api/vies` (même code que le Worker, réservé à la page qu'il sert). Ouvrez l'application via `http://localhost:8000` : la section 3 l'utilise automatiquement. Sur GitHub Pages, ce relais n'existe pas : il faut le Worker ci-dessous.
+
+#### Cloudflare Worker (pour GitHub Pages)
 
 L'API VIES n'envoie pas d'en-têtes CORS : un navigateur ne peut pas l'appeler directement depuis GitHub Pages. Le dossier `worker/` contient un relais gratuit (≈ 40 lignes, sans journal ni stockage) qui transmet la requête à VIES et ajoute les en-têtes CORS pour les seules origines listées dans `ALLOWED_ORIGINS`.
 
