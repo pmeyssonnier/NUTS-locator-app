@@ -4,6 +4,9 @@ import {checkVat, VIES_ENDPOINT} from '../src/lib/vies.js';
 
 // Pour tester un relais : node scripts/check-vies.mjs https://nuts-vies-proxy.xxx.workers.dev
 const ENDPOINT = process.argv[2] || VIES_ENDPOINT;
+const ORIGIN = 'https://pmeyssonnier.github.io';
+// Un navigateur envoie l'en-tête Origin ; Node non. Un relais (Worker) refuse les requêtes sans origine autorisée : on l'ajoute pour le test.
+const fetchWithOrigin = (url, opts = {}) => fetch(url, {...opts, headers: {...opts.headers, Origin: ORIGIN}});
 
 const CASES = [
   ['IE6388047V', 'VALIDE', 'Google Ireland (numéro public)'],
@@ -15,7 +18,7 @@ const CASES = [
 let ko = 0;
 const t0 = Date.now();
 for (const [vat, expected, label] of CASES) {
-  const r = await checkVat(vat, fetch, ENDPOINT);
+  const r = await checkVat(vat, process.argv[2] ? fetchWithOrigin : fetch, ENDPOINT);
   const good = r.status === expected || (r.status === 'SERVICE_INDISPONIBLE' && 'indispo');
   if (good !== true) ko++;
   console.log(`${good === true ? '✔' : good ? '?' : '✘'} ${vat.padEnd(14)} attendu ${expected.padEnd(16)} obtenu ${r.status.padEnd(20)} ${r.name || r.detail || ''}  — ${label}`);
@@ -24,7 +27,7 @@ for (const [vat, expected, label] of CASES) {
 console.log(`Durée : ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 try {
   // requête réelle avec Origin : ce que voit le navigateur après le préflight
-  const origin = 'https://pmeyssonnier.github.io', h = {Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'content-type'};
+  const origin = ORIGIN, h = {Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'content-type'};
   const o = await fetch(ENDPOINT, {method: 'OPTIONS', headers: h});
   const p = await fetch(ENDPOINT, {method: 'POST', headers: {Origin: origin, 'Content-Type': 'application/json'}, body: JSON.stringify({countryCode: 'IE', vatNumber: '6388047V'})});
   const a1 = o.headers.get('access-control-allow-origin'), a2 = p.headers.get('access-control-allow-origin');
