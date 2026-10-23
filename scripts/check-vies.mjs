@@ -10,6 +10,7 @@ const fetchWithOrigin = (url, opts = {}) => fetch(url, {...opts, headers: {...op
 
 const CASES = [
   ['IE6388047V', 'VALIDE', 'Google Ireland (numéro public)'],
+  ['BE0467018079', 'VALIDE', 'Consultora sprl (numéro public)'],
   ['DE000000000', 'INVALIDE', 'numéro inexistant, format correct'],
   ['BE0999999999', 'INVALIDE', 'numéro inexistant, format correct'],
   ['DE12345', 'FORMAT_INVALIDE', 'rejeté localement'],
