@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/vies-proxy.js';
 
-const ORIGIN = 'https://pmeyssonnier.github.io', env = {ALLOWED_ORIGINS: ORIGIN + ', http://localhost:8000'};
+const ORIGIN = 'https://pmeyssonnier.github.io', env = {ALLOWED_ORIGINS: ORIGIN + ', http://localhost:8123'};
 const req = (method, body, origin = ORIGIN) => new Request('https://relay.example/', {method, headers: {Origin: origin, 'Content-Type': 'application/json'}, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body)});
 const withUpstream = async (impl, fn) => { const real = globalThis.fetch; globalThis.fetch = impl; try { return await fn(); } finally { globalThis.fetch = real; } };
 
