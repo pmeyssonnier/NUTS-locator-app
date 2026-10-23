@@ -1,14 +1,17 @@
 // Serveur statique minimal, sans dépendance : les modules ES ne se chargent pas depuis file://
 // Usage : npm start [port]   (http://localhost:8000 par défaut ; si ce port est pris, le suivant libre est utilisé,
 // sauf si un port est demandé explicitement : sous npm, `npm start -- 8765`)
+// Option --open : ouvre le navigateur par défaut sur l'adresse utilisée (lanceur Windows : lancer-nuts.bat)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import relay from '../worker/vies-proxy.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const asked = process.argv[2] || process.env.PORT;
+const args = process.argv.slice(2), openBrowser = args.includes('--open');
+const asked = args.find(a => !a.startsWith('--')) || process.env.PORT;
 const first = Number(asked || 8000);
 const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.geojson': 'application/geo+json', '.png': 'image/png', '.svg': 'image/svg+xml',
@@ -43,5 +46,11 @@ server.on('error', err => {
   console.log(`Le port ${port} est déjà utilisé, essai du ${port + 1}…`);
   server.listen(++port);
 });
-server.on('listening', () => console.log(`NUTS Locator : http://localhost:${port}`));
+function open(url) {
+  const [cmd, argv] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]] : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  const child = spawn(cmd, argv, {stdio: 'ignore', detached: true, windowsVerbatimArguments: true});
+  child.on('error', () => console.log(`Ouvrez ${url} dans votre navigateur.`));
+  child.unref();
+}
+server.on('listening', () => { const url = `http://localhost:${port}`; console.log(`NUTS Locator : ${url}`); if (openBrowser) open(url); });
 server.listen(port);

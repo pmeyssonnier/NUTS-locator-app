@@ -14,6 +14,7 @@ Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le cod
 
 - **En ligne** : la version publiée sur GitHub Pages (fichiers statiques, rien à configurer).
 - **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez l'adresse affichée dans le terminal (http://localhost:8000 par défaut). Si ce port est déjà pris par un autre programme (on voit alors une autre application à cette adresse), le serveur prend le port suivant libre et l'affiche ; pour imposer un port : `npm start -- 8765`. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
+- **Sous Windows** : double-cliquez sur `lancer-nuts.bat` (à la racine du dépôt ; clic droit → « Envoyer vers → Bureau (créer un raccourci) » pour l'avoir sur le Bureau). Il aligne le dépôt sur GitHub si Git est installé (`main`, ou une autre branche en argument : `lancer-nuts.bat ma-branche`), démarre le serveur et ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8000 est pris). Node.js (LTS) est requis ; fermer la fenêtre arrête le serveur. L'option `--open` de `scripts/serve.mjs` (`npm start -- --open`) fait la même ouverture du navigateur sur tout système.
 - **Sous Termux (Android)** : `pkg install nodejs git`, clonez le dépôt puis `bash scripts/termux-start.sh` : le script aligne le dépôt sur GitHub (`main` ; une autre branche en argument : `bash scripts/termux-start.sh ma-branche` ; pas de fusion, donc pas d’erreur « divergent branches »), lance le serveur, ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8000 est pris) et arrête le serveur à `Ctrl+C`.
 
 1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ». Pour une ou quelques adresses, ouvrez « Saisir une adresse manuellement » : « Ajouter et lancer » (ou Entrée) ajoute l'adresse à la liste « Saisie manuelle » et la traite aussitôt (géocodage ou mode sans géocodage selon la case cochée), puis l'affiche sur la carte ; « Ajouter sans lancer » permet d'en saisir plusieurs avant de cliquer sur « Géocoder ». Le pays peut rester vide (pays par défaut des réglages). Si un fichier est déjà chargé, une confirmation est demandée avant de le remplacer.
@@ -235,6 +236,7 @@ src/ui/             interface (DOM)
   selftests.js                   auto-tests du navigateur (#tests)
 test/               tests Node (node:test)
 scripts/serve.mjs   serveur statique local (npm start) et relais VIES /api/vies
+lancer-nuts.bat   Windows : mise à jour, serveur local et ouverture du navigateur
 scripts/termux-start.sh   Termux : mise à jour, serveur local et ouverture du navigateur
 ```
 
