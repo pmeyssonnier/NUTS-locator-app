@@ -1,5 +1,5 @@
 // Serveur statique minimal, sans dépendance : les modules ES ne se chargent pas depuis file://
-// Usage : npm start [port]   (http://localhost:8000 par défaut ; si ce port est pris, le suivant libre est utilisé,
+// Usage : npm start [port]   (http://localhost:8123 par défaut ; si ce port est pris, le suivant libre est utilisé,
 // sauf si un port est demandé explicitement : sous npm, `npm start -- 8765`)
 // Option --open : ouvre le navigateur par défaut sur l'adresse utilisée (lanceur Windows : lancer-nuts.bat)
 import http from 'node:http';
@@ -13,7 +13,7 @@ import relay from '../worker/vies-proxy.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2), openBrowser = args.includes('--open');
 const asked = args.find(a => !a.startsWith('--')) || process.env.PORT;
-const first = Number(asked || 8000);
+const first = Number(asked || 8123);
 const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.geojson': 'application/geo+json', '.png': 'image/png', '.svg': 'image/svg+xml',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.md': 'text/markdown; charset=utf-8'};

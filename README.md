@@ -13,9 +13,9 @@ Application web (JavaScript natif, sans dépendance ni étape de compilation) qu
 Utilisez un navigateur récent (Chrome 116+, Firefox 124+, Safari 17.4+). Le code est découpé en modules ES : la page doit être **servie en HTTP(S)**, elle ne fonctionne pas ouverte directement depuis un fichier (`file://`, un bandeau l'indique).
 
 - **En ligne** : la version publiée sur GitHub Pages (fichiers statiques, rien à configurer).
-- **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez l'adresse affichée dans le terminal (http://localhost:8000 par défaut). Si ce port est déjà pris par un autre programme (on voit alors une autre application à cette adresse), le serveur le détecte en sondant le port en IPv4 et IPv6 (y compris quand l'autre application n'écoute que sur 127.0.0.1, cas où Windows laisse pourtant démarrer un second serveur), prend le port suivant libre et l'affiche ; pour imposer un port : `npm start -- 8765`. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
-- **Sous Windows** : double-cliquez sur `lancer-nuts.bat` (à la racine du dépôt ; clic droit → « Envoyer vers → Bureau (créer un raccourci) » pour l'avoir sur le Bureau). Il aligne le dépôt sur GitHub si Git est installé (`main`, ou une autre branche en argument : `lancer-nuts.bat ma-branche`), démarre le serveur et ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8000 est pris). Node.js (LTS) est requis ; fermer la fenêtre arrête le serveur. L'option `--open` de `scripts/serve.mjs` (`npm start -- --open`) fait la même ouverture du navigateur sur tout système.
-- **Sous Termux (Android)** : `pkg install nodejs git`, clonez le dépôt puis `bash scripts/termux-start.sh` : le script aligne le dépôt sur GitHub (`main` ; une autre branche en argument : `bash scripts/termux-start.sh ma-branche` ; pas de fusion, donc pas d’erreur « divergent branches »), lance le serveur, ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8000 est pris) et arrête le serveur à `Ctrl+C`.
+- **En local** : `npm start` dans le dossier du projet (petit serveur sans dépendance, Node 20+), puis ouvrez l'adresse affichée dans le terminal (http://localhost:8123 par défaut ; port volontairement peu courant : 8000 sert souvent à d'autres applications locales, et un navigateur peut garder en cache une application servie auparavant à cette adresse). Si ce port est déjà pris par un autre programme (on voit alors une autre application à cette adresse), le serveur le détecte en sondant le port en IPv4 et IPv6 (y compris quand l'autre application n'écoute que sur 127.0.0.1, cas où Windows laisse pourtant démarrer un second serveur), prend le port suivant libre et l'affiche ; pour imposer un port : `npm start -- 8765`. Tout autre serveur statique convient (`python3 -m http.server`, `npx serve`…).
+- **Sous Windows** : double-cliquez sur `lancer-nuts.bat` (à la racine du dépôt ; clic droit → « Envoyer vers → Bureau (créer un raccourci) » pour l'avoir sur le Bureau). Il aligne le dépôt sur GitHub si Git est installé (`main`, ou une autre branche en argument : `lancer-nuts.bat ma-branche`), démarre le serveur et ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8123 est pris). Node.js (LTS) est requis ; fermer la fenêtre arrête le serveur. L'option `--open` de `scripts/serve.mjs` (`npm start -- --open`) fait la même ouverture du navigateur sur tout système.
+- **Sous Termux (Android)** : `pkg install nodejs git`, clonez le dépôt puis `bash scripts/termux-start.sh` : le script aligne le dépôt sur GitHub (`main` ; une autre branche en argument : `bash scripts/termux-start.sh ma-branche` ; pas de fusion, donc pas d’erreur « divergent branches »), lance le serveur, ouvre le navigateur sur l'adresse réellement utilisée (le port suivant si 8123 est pris) et arrête le serveur à `Ctrl+C`.
 
 1. **Données** : chargez votre fichier, ou cliquez sur « Charger l'exemple ». Pour une ou quelques adresses, ouvrez « Saisir une adresse manuellement » : « Ajouter et lancer » (ou Entrée) ajoute l'adresse à la liste « Saisie manuelle » et la traite aussitôt (géocodage ou mode sans géocodage selon la case cochée), puis l'affiche sur la carte ; « Ajouter sans lancer » permet d'en saisir plusieurs avant de cliquer sur « Géocoder ». Le pays peut rester vide (pays par défaut des réglages). Si un fichier est déjà chargé, une confirmation est demandée avant de le remplacer.
 2. **Colonnes & géocodage** : les colonnes sont reconnues automatiquement (le résumé les affiche) ; cliquez sur « Géocoder ». Les sections « Colonnes », « Réglages » (e-mail pour la politique Nominatim, pays par défaut, précision des contours, Royaume-Uni, serveur), « Imports hors ligne » (contours, tables Eurostat) et « Confidentialité et limites » sont repliées pour tenir sur un écran de téléphone ; un clic sur leur titre les ouvre. La section « Colonnes » s'ouvre d'elle-même quand aucune colonne n'est reconnue.
@@ -146,7 +146,7 @@ Avant tout appel réseau, le format national du numéro est vérifié (`FORMAT_I
 
 ### Relais VIES : serveur local (sans compte) ou Cloudflare Worker
 
-**Sans rien configurer, en local** : `npm start` (ou Termux : `bash scripts/termux-start.sh`) fournit un relais `/api/vies` (même code que le Worker, réservé à la page qu'il sert). Ouvrez l'application via `http://localhost:8000` : la section 3 l'utilise automatiquement. Sur GitHub Pages, ce relais n'existe pas : il faut le Worker ci-dessous.
+**Sans rien configurer, en local** : `npm start` (ou Termux : `bash scripts/termux-start.sh`) fournit un relais `/api/vies` (même code que le Worker, réservé à la page qu'il sert). Ouvrez l'application via `http://localhost:8123` : la section 3 l'utilise automatiquement. Sur GitHub Pages, ce relais n'existe pas : il faut le Worker ci-dessous.
 
 #### Cloudflare Worker (pour GitHub Pages)
 
@@ -158,7 +158,7 @@ cd worker
 npx wrangler login
 npx wrangler deploy
 ```
-Wrangler affiche l'adresse du Worker (`https://nuts-vies-proxy.<compte>.workers.dev`). Collez-la dans le champ « Relais VIES » de la section 3 (mémorisé dans le navigateur). Pour des essais locaux, ajoutez `http://localhost:8000` à `ALLOWED_ORIGINS` dans `worker/wrangler.toml`. Contrôle : `node scripts/check-vies.mjs https://nuts-vies-proxy.<compte>.workers.dev`.
+Wrangler affiche l'adresse du Worker (`https://nuts-vies-proxy.<compte>.workers.dev`). Collez-la dans le champ « Relais VIES » de la section 3 (mémorisé dans le navigateur). Pour des essais locaux, ajoutez `http://localhost:8123` à `ALLOWED_ORIGINS` dans `worker/wrangler.toml`. Contrôle : `node scripts/check-vies.mjs https://nuts-vies-proxy.<compte>.workers.dev`.
 
 Les numéros de TVA transitent alors par votre Worker avant d'atteindre la Commission européenne.
 
@@ -244,7 +244,7 @@ Règles de dépendance : `src/lib/` n'importe jamais `src/ui/`, et il n'y a aucu
 
 ## Tests
 
-**Dans le navigateur** : ajoutez `#tests` à l'URL (`http://localhost:8000/#tests`) pour lancer des auto-tests rapides.
+**Dans le navigateur** : ajoutez `#tests` à l'URL (`http://localhost:8123/#tests`) pour lancer des auto-tests rapides.
 
 **En ligne de commande** (Node 20+, aucune dépendance à installer) :
 
