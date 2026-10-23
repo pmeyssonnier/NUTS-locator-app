@@ -3,6 +3,7 @@
 // sauf si un port est demandé explicitement : sous npm, `npm start -- 8765`)
 // Option --open : ouvre le navigateur par défaut sur l'adresse utilisée (lanceur Windows : lancer-nuts.bat)
 import http from 'node:http';
+import net from 'node:net';
 import fs from 'node:fs';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
@@ -38,14 +39,28 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {'content-type': types[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-cache'}).end(data);
   });
 });
-// Un autre programme occupe peut-être déjà le port (d'où une autre application à l'adresse attendue) : on essaie les suivants
+// Un autre programme occupe peut-être déjà le port. Sous Windows, lier le port ne suffit pas à le détecter : un autre serveur
+// écoutant seulement sur 127.0.0.1 laisse notre bind réussir, et « localhost » mène alors à cette autre application.
+// On sonde donc d'abord le port en IPv4 et IPv6 : si quelque chose répond, on passe au suivant.
+const taken = p => Promise.all(['127.0.0.1', '::1'].map(host => new Promise(resolve => {
+  const sock = net.connect({port: p, host});
+  const done = v => { sock.destroy(); resolve(v); };
+  sock.setTimeout(400, () => done(false));
+  sock.on('connect', () => done(true));
+  sock.on('error', () => done(false));
+}))).then(r => r.some(Boolean));
 let port = first;
-server.on('error', err => {
-  if (err.code !== 'EADDRINUSE') throw err;
+const busy = () => {
   if (asked || port >= first + 20) { console.error(`Le port ${port} est déjà utilisé. Choisissez-en un autre : npm start -- 8765`); process.exit(1); }
   console.log(`Le port ${port} est déjà utilisé, essai du ${port + 1}…`);
-  server.listen(++port);
-});
+  port++;
+  return start();
+};
+server.on('error', err => { if (err.code !== 'EADDRINUSE') throw err; busy(); });
+async function start() {
+  if (await taken(port)) return busy();
+  server.listen(port);
+}
 function open(url) {
   const [cmd, argv] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]] : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
   const child = spawn(cmd, argv, {stdio: 'ignore', detached: true, windowsVerbatimArguments: true});
@@ -53,4 +68,4 @@ function open(url) {
   child.unref();
 }
 server.on('listening', () => { const url = `http://localhost:${port}`; console.log(`NUTS Locator : ${url}`); if (openBrowser) open(url); });
-server.listen(port);
+start();
